@@ -71,7 +71,7 @@ The following potential issues should be considered:
 
 === Commands
 
-  remapid index   - Create a filesystem index of impacted paths
+  remapid index   - Create a filesystem index of impacted paths using a map
   remapid status  - Show a status report of impacted paths and affected UIDs/GIDs
   remapid remap   - Remap the impacted paths according to the provided map
   remapid restore - Restore the original situation using the filesystem index
@@ -107,17 +107,25 @@ The following potential issues should be considered:
 
   remapid index -f remapid-20151126-1912.idx -m mapping.yaml /home /usr
   remapid status -f remapid-20151126-1912.idx
-  remapid remap -f remapid-20151126-1912.idx -m mapping.yaml
+  remapid remap -f remapid-20151126-1912.idx
   remapid restore -f remapid-20151126-1912.idx
 
 
 == File format
 
-=== map
+=== Map
 The map is created as YAML or JSON file.
 Or potentially a CSV file.
 
-=== file system index
+=== File system index
 The file system index will be a pickle file with a specific remapid data structure.
 
 Or could become something more efficient (storage and speed-wise).
+
+The file system index stores the following information:
+
+ - A version number
+ - A set of excluded devices (?)
+ - The scope (parents) that require changes
+ - The actual mapping used for the index
+ - The list of paths and original uids/gids
