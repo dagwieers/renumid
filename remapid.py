@@ -18,6 +18,8 @@
 import sys
 import os
 import optparse
+import cPickle as pickle
+import time
 
 VERSION = '0.1'
 
@@ -41,6 +43,7 @@ excluded_fstypes = (
     'tmpfs',
 )
 
+database = 'remapid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime())
 debug = True
 info = True
 parent = '.'
@@ -83,9 +86,9 @@ def find_excluded_devices():
 ### Make a list of excluded (mount) devices:
 excluded_devices = find_excluded_devices()
 
-for root, dirs, files in os.walk(parent, topdown=True):
+for root, dirs, files in os.walk(parent, topdown=False):
 
-    ### For speed, drop every root that is on an excluded device number
+    ### For speed, drop every root that is on an excluded device
     if os.lstat(root).st_dev in excluded_devices:
         continue
 
@@ -117,3 +120,11 @@ for root, dirs, files in os.walk(parent, topdown=True):
                 store['gid'][s.st_gid].append(path)
 
 print store
+
+### FIXME: Handle the case where the file already exists using tempfile
+### Dump database
+try:
+    pickle.dump(store, open(database, 'wb'))
+except:
+    print >>sys.stderr, 'ERROR: Unable to dump database %s !' % database
+    raise
