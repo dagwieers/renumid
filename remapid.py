@@ -44,6 +44,26 @@ excluded_fstypes = (
 debug = True
 info = True
 parent = '.'
+
+store = {
+  'uid': { },
+  'gid': { },
+}
+
+### TODO: Example mapping for testing on /dev (to be stored in an external file)
+uidmap = {
+  10: 10010,   # uucp
+  69: 10069,   # vcsa
+}
+
+gidmap = {
+  5: 10005,    # tty
+  16: 100016,  # oprofile
+  39: 10039,   # video
+  69: 10069,   # vcsa
+  505: 10505,  # vcsa
+}
+
 if len(sys.argv) > 1:
     parent = sys.argv[1]
 
@@ -57,12 +77,31 @@ def fstype(root):
         raise Exception, 'Path %s is not a known file system'
 
 for root, dirs, files in os.walk(parent, topdown=True):
+
+    ### Skip certain filesystems
+    if os.path.ismount(root):
+        if fstype(root) in excluded_fstypes:
+            if debug:
+                print >>sys.stderr, 'DEBUG: Ignoring file system %s with type %s' % (root, fstype(root))
+#                raise
+            continue
+
     for path in dirs + files:
         ### Make path absolute
         path = os.path.join(root, path)
 
         try:
             s = os.lstat(path)
-            print path, s.st_uid, s.st_gid
+#            print path, s.st_uid, s.st_gid
         except OSError, e:
             print >>sys.stderr, 'WARNING: %s' % e
+
+        if s.st_uid in uidmap.keys():
+            if debug:
+                print >>sys.stderr, 'DEBUG: Found path %s owned by uid %d' % (path, s.st_uid)
+            if s.st_uid not in store['uid'].keys():
+                store['uid'] = { s.st_uid: [ path ] }
+            else:
+                store['uid'][s.st_uid].append(path)
+
+print store
