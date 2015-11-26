@@ -50,18 +50,23 @@ store = {
   'gid': { },
 }
 
-### TODO: Example mapping for testing on /dev (to be stored in an external file)
+### TODO: Example mapping for testing on /dev and /tmp (to be stored in an external file)
 uidmap = {
   10: 10010,   # uucp
+  42: 10042,   # gdm
+  48: 10048,   # apache
   69: 10069,   # vcsa
+  500: 10500,  # dag
 }
 
 gidmap = {
   5: 10005,    # tty
   16: 100016,  # oprofile
   39: 10039,   # video
+  42: 10042,   # gdm
   69: 10069,   # vcsa
-  505: 10505,  # vcsa
+  484: 10484,  # tmux
+  505: 10505,  # vboxusers
 }
 
 if len(sys.argv) > 1:
@@ -86,6 +91,7 @@ for root, dirs, files in os.walk(parent, topdown=True):
 #                raise
             continue
 
+    ### Find paths that require remapping and store them
     for path in dirs + files:
         ### Make path absolute
         path = os.path.join(root, path)
@@ -103,5 +109,13 @@ for root, dirs, files in os.walk(parent, topdown=True):
                 store['uid'][s.st_uid] = [ path ]
             else:
                 store['uid'][s.st_uid].append(path)
+
+        if s.st_gid in gidmap.keys():
+            if debug:
+                print >>sys.stderr, 'DEBUG: Found path %s owned by gid %d' % (path, s.st_gid)
+            if s.st_gid not in store['gid'].keys():
+                store['gid'][s.st_gid] = [ path ]
+            else:
+                store['gid'][s.st_gid].append(path)
 
 print store
