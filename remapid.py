@@ -22,21 +22,20 @@ import cPickle as pickle
 import time
 
 VERSION = '0.1'
-
-#parser = optparse.OptionParser(version='%prog %s' % VERSION)
-#parser
+FORMAT_VERSION = 1
 
 ### FIXME: Allow the user to influence this on the commandline
-### TODO: Maybe use and include-list instead, or allow both ?
+### TODO: Maybe use an include-list instead, or allow both ?
 excluded_fstypes = ( 'cifs', 'nfs', 'nfs4', 'sshfs', )
 #included_fstypes = ( 'ext3', 'ext4', 'xfs', )
 
-database = 'remapid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime())
 debug = True
 info = True
 parent = '.'
 
 store = {
+  'version': FORMAT_VERSION,
+  'start': time.localtime(),
   'uid': { },
   'gid': { },
 }
@@ -59,8 +58,11 @@ gidmap = {
   505: 10505,  # vboxusers
 }
 
-if len(sys.argv) > 1:
-    parent = sys.argv[1]
+subcommands = ('index', 'status', 'remap', 'restore')
+
+def debug(msg):
+    if options.debug:
+        print >>sys.stderr, 'DEBUG:', msg
 
 ### TODO: Allow to exclude specific filesystem types (e.g. nfs, nfs4, etc...)
 def find_excluded_devices():
@@ -70,57 +72,88 @@ def find_excluded_devices():
         (dev, mp, fstype, opts, x, y) = l.split()
         s = os.statvfs(mp)
         if s.f_blocks == 0:
-            if debug:
-                print >>sys.stderr, 'DEBUG: Exclude pseudo filesystem %s of type %s' % (mp, fstype)
+            debug('Exclude pseudo filesystem %s of type %s' % (mp, fstype))
             excluded_devices.append(os.lstat(mp).st_dev)
         if fstype in excluded_fstypes:
-            if debug:
-                print >>sys.stderr, 'DEBUG: Exclude filesystem %s of type %s' % (mp, fstype)
+            debug('Exclude filesystem %s of type %s' % (mp, fstype))
             excluded_devices.append(os.lstat(mp).st_dev)
     return excluded_devices
 
-### Make a list of excluded (mount) devices:
-excluded_devices = find_excluded_devices()
+parser = optparse.OptionParser(version='%prog '+VERSION)
+parser.add_option( '-d', '--debug', action='store_true',
+    dest='debug', help='Enable debug mode.' )
+parser.add_option( '-f', '--file', action='store',
+    dest='index', help='Index file to store to/read from.' )
+parser.add_option( '-v', '--verbose', action='count',
+    dest='verbose', help='Be more and more and more verbose.' )
 
-for root, dirs, files in os.walk(parent, topdown=False):
+group = optparse.OptionGroup(parser, "Index options",
+                    "These options only apply to Index mode.")
+group.add_option('-m', '--map', action='store',
+    dest='map', help='Map file to use for UID/GID remapping.' )
+group.add_option('-x', '--one-file-system', action='store_true',
+    dest='nocross', help='Don\'t cross device boundaries.' )
+parser.add_option_group(group)
 
-    ### For speed, drop every root that is on an excluded device
-    if os.lstat(root).st_dev in excluded_devices:
-        continue
+### Set the default index name
+parser.set_defaults(index='remapid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime()))
 
-    ### Find paths that require remapping and store them
-    for path in dirs + files:
-        ### Make path absolute
-        path = os.path.join(root, path)
+(options, args) = parser.parse_args()
 
-        try:
-            s = os.lstat(path)
-#            print path, s.st_uid, s.st_gid
-        except OSError, e:
-            print >>sys.stderr, 'WARNING: %s' % e
+subcommand = args[0]
+if args[0] not in subcommands:
+    print >>sys.stderr, 'ERROR: Subcommand \'%s\' unknown, should be one of %s.' % (args[0], subcommands)
+    sys.exit(1)
 
-        if s.st_uid in uidmap.keys():
-            if debug:
-                print >>sys.stderr, 'DEBUG: Found path %s owned by uid %d' % (path, s.st_uid)
-            if s.st_uid not in store['uid'].keys():
-                store['uid'][s.st_uid] = [ path ]
-            else:
-                store['uid'][s.st_uid].append(path)
 
-        if s.st_gid in gidmap.keys():
-            if debug:
-                print >>sys.stderr, 'DEBUG: Found path %s owned by gid %d' % (path, s.st_gid)
-            if s.st_gid not in store['gid'].keys():
-                store['gid'][s.st_gid] = [ path ]
-            else:
-                store['gid'][s.st_gid].append(path)
+### INDEX mode
+if subcommand == 'index':
 
-print store
+    parents = args[1:]
 
-### FIXME: Handle the case where the file already exists using tempfile
-### Dump database
-try:
-    pickle.dump(store, open(database, 'wb'))
-except:
-    print >>sys.stderr, 'ERROR: Unable to dump database %s !' % database
-    raise
+    ### Make a list of excluded (mount) devices:
+    excluded_devices = find_excluded_devices()
+
+    for parent in parents:
+        for root, dirs, files in os.walk(parent, topdown=False):
+
+            ### For speed, drop every root that is on an excluded device
+            if os.lstat(root).st_dev in excluded_devices:
+                continue
+
+            ### Find paths that require remapping and store them
+            for path in dirs + files:
+                ### Make path absolute
+                path = os.path.join(root, path)
+
+                try:
+                    s = os.lstat(path)
+#                    print path, s.st_uid, s.st_gid
+                except OSError, e:
+                    print >>sys.stderr, 'WARNING: %s' % e
+
+                if s.st_uid in uidmap.keys():
+                    debug('DEBUG: Found path %s owned by uid %d' % (path, s.st_uid))
+                    if s.st_uid not in store['uid'].keys():
+                        store['uid'][s.st_uid] = [ path ]
+                    else:
+                        store['uid'][s.st_uid].append(path)
+
+                if s.st_gid in gidmap.keys():
+                    debug('DEBUG: Found path %s owned by gid %d' % (path, s.st_gid))
+                    if s.st_gid not in store['gid'].keys():
+                        store['gid'][s.st_gid] = [ path ]
+                    else:
+                        store['gid'][s.st_gid].append(path)
+
+    store['duration'] = time.clock()
+    print >>sys.stderr, 'Total time:', store['duration'], 'secs'
+    print store
+
+    ### FIXME: Handle the case where the file already exists using tempfile
+    ### Dump database
+    try:
+        pickle.dump(store, open(options.index, 'wb'))
+    except:
+        print >>sys.stderr, 'ERROR: Unable to dump database %s !' % options.index
+        raise
