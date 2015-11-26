@@ -29,17 +29,6 @@ FORMAT_VERSION = 1
 excluded_fstypes = ( 'cifs', 'nfs', 'nfs4', 'sshfs', )
 #included_fstypes = ( 'ext3', 'ext4', 'xfs', )
 
-debug = True
-info = True
-parent = '.'
-
-store = {
-  'version': FORMAT_VERSION,
-  'start': time.localtime(),
-  'uid': { },
-  'gid': { },
-}
-
 ### TODO: Example mapping for testing on /dev and /tmp (to be stored in an external file)
 uidmap = {
   10: 10010,   # uucp
@@ -64,6 +53,10 @@ def debug(msg):
     if options.debug:
         print >>sys.stderr, 'DEBUG:', msg
 
+def info(level, msg):
+    if options.verbose >= level:
+        print msg
+
 ### TODO: Allow to exclude specific filesystem types (e.g. nfs, nfs4, etc...)
 def find_excluded_devices():
     ''' Return a list of file system devices that are excluded '''
@@ -84,6 +77,8 @@ parser.add_option( '-d', '--debug', action='store_true',
     dest='debug', help='Enable debug mode.' )
 parser.add_option( '-f', '--file', action='store',
     dest='index', help='Index file to store to/read from.' )
+parser.add_option( '-t', '--test', action='store_true',
+    dest='test', help='Test the run without actually changing anything.' )
 parser.add_option( '-v', '--verbose', action='count',
     dest='verbose', help='Be more and more and more verbose.' )
 
@@ -101,7 +96,7 @@ parser.set_defaults(index='remapid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.l
 (options, args) = parser.parse_args()
 
 subcommand = args[0]
-if args[0] not in subcommands:
+if subcommand not in subcommands:
     print >>sys.stderr, 'ERROR: Subcommand \'%s\' unknown, should be one of %s.' % (args[0], subcommands)
     sys.exit(1)
 
@@ -109,12 +104,30 @@ if args[0] not in subcommands:
 ### INDEX mode
 if subcommand == 'index':
 
-    parents = args[1:]
+    if len(args) < 2:
+        parents = [ os.getcwd(), ]
+    else:
+        parents = args[1:]
+
+    store = {
+      'parents': parents,
+      'version': FORMAT_VERSION,
+      'start': time.localtime(),
+      'uid': { },
+      'gid': { },
+    }
 
     ### Make a list of excluded (mount) devices:
     excluded_devices = find_excluded_devices()
 
+    retained_path_count = 0
+    total_path_count = 0
+
     for parent in parents:
+
+        if options.verbose > 0:
+            print 'Processing %s' % parent
+
         for root, dirs, files in os.walk(parent, topdown=False):
 
             ### For speed, drop every root that is on an excluded device
@@ -125,6 +138,7 @@ if subcommand == 'index':
             for path in dirs + files:
                 ### Make path absolute
                 path = os.path.join(root, path)
+                total_path_count += 1
 
                 try:
                     s = os.lstat(path)
@@ -133,27 +147,105 @@ if subcommand == 'index':
                     print >>sys.stderr, 'WARNING: %s' % e
 
                 if s.st_uid in uidmap.keys():
-                    debug('DEBUG: Found path %s owned by uid %d' % (path, s.st_uid))
+                    info(2, 'Found path %s owned by uid %d' % (path, s.st_uid))
                     if s.st_uid not in store['uid'].keys():
                         store['uid'][s.st_uid] = [ path ]
                     else:
                         store['uid'][s.st_uid].append(path)
+                    retained_path_count += 1
 
                 if s.st_gid in gidmap.keys():
-                    debug('DEBUG: Found path %s owned by gid %d' % (path, s.st_gid))
+                    info(2, 'Found path %s owned by gid %d' % (path, s.st_gid))
                     if s.st_gid not in store['gid'].keys():
                         store['gid'][s.st_gid] = [ path ]
                     else:
                         store['gid'][s.st_gid].append(path)
+                    retained_path_count += 1
 
     store['duration'] = time.clock()
-    print >>sys.stderr, 'Total time:', store['duration'], 'secs'
-    print store
+    store['stop'] = time.localtime()
+    store['uidmap'] = uidmap
+    store['gidmap'] = gidmap
+
+    if options.debug:
+        print '--------'
+        print store
+        print '--------'
 
     ### FIXME: Handle the case where the file already exists using tempfile
     ### Dump database
     try:
         pickle.dump(store, open(options.index, 'wb'))
     except:
-        print >>sys.stderr, 'ERROR: Unable to dump database %s !' % options.index
+        print >>sys.stderr, 'ERROR: Unable to dump index %s !' % options.index
         raise
+
+    print >>sys.stderr, 'Index file written to %s' % options.index
+
+    if options.verbose > 0:
+        print >>sys.stderr, 'Number of paths retained:', retained_path_count
+        print >>sys.stderr, 'Total number of paths processed:', total_path_count
+        print >>sys.stderr, 'Total time:', store['duration'], 'secs'
+
+
+if subcommand in ('status', 'remap', 'restore'):
+
+    ### Open database (if exists and consistent)
+    if os.path.lexists(options.index):
+        try:
+            store = pickle.load(open(options.index, 'rb'))
+        except:
+            print >>sys.stderr, 'WARNING: Problem reading from database %s, dropping' % database
+    else:
+        print >>sys.stderr, 'ERROR: Index file %s could not be found.' % options.index
+        sys.exit(1)
+
+
+### STATUS mode
+if subcommand == 'status':
+
+    print 'Index file %s' % options.index
+    print
+
+    print '  Version:', store['version']
+    print '  Date:', time.strftime("%a, %d %b %Y %H:%M:%S +0000", store['start'])
+    print '  Duration:', store['duration'], 'secs'
+
+
+### REMAP mode
+if subcommand == 'remap':
+
+    for uid in store['uid'].keys():
+        for path in store['uid'][uid]:
+            nuid = uidmap[uid]
+            gid = os.lstat(path).st_gid
+            info(1, 'Set path %s to uid %d' % (path, nuid))
+            if not options.test:
+                os.lchown(path, nuid, gid)
+
+    for gid in store['gid'].keys():
+        for path in store['gid'][gid]:
+            ngid = gidmap[gid]
+            uid = os.lstat(path).st_uid
+            info(1, 'Set path %s to gid %d' % (path, ngid))
+            if not options.test:
+                os.lchown(path, uid, ngid)
+
+
+### RESTORE mode
+if subcommand == 'restore':
+
+    for uid in store['uid'].keys():
+        for path in store['uid'][uid]:
+            gid = os.lstat(path).st_gid
+            info(1, 'Set path %s to uid %d' % (path, uid))
+            if not options.test:
+                os.lchown(path, uid, gid)
+
+    for gid in store['gid'].keys():
+        for path in store['gid'][gid]:
+            uid = os.lstat(path).st_uid
+            info(1, 'Set path %s to gid %d' % (path, gid))
+            if not options.test:
+                os.lchown(path, uid, gid)
+
