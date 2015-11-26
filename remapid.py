@@ -100,7 +100,7 @@ for root, dirs, files in os.walk(parent, topdown=True):
             if debug:
                 print >>sys.stderr, 'DEBUG: Found path %s owned by uid %d' % (path, s.st_uid)
             if s.st_uid not in store['uid'].keys():
-                store['uid'] = { s.st_uid: [ path ] }
+                store['uid'][s.st_uid] = [ path ]
             else:
                 store['uid'][s.st_uid].append(path)
 
