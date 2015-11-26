@@ -20,3 +20,10 @@
 
 == Miscellaneous
 - Handle case where Index file already exists (during dump)
+- Improve document
+- Add manual page
+
+
+== Optional
+- Option to create a full index (discard map)
+- Option to switch remap/restore based on uidmap/gidmap or complete store
