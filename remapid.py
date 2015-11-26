@@ -56,7 +56,6 @@ uidmap = {
   42: 10042,   # gdm
   48: 10048,   # apache
   69: 10069,   # vcsa
-  500: 10500,  # dag
 }
 
 gidmap = {
@@ -72,24 +71,23 @@ gidmap = {
 if len(sys.argv) > 1:
     parent = sys.argv[1]
 
-def fstype(root):
-    ''' Return file system type of a file system root'''
+def find_excluded_devices():
+    ''' Return a list of file system devices that are excluded '''
+    excluded_devices = []
     for l in open('/proc/mounts', 'r'):
         (dev, mp, fstype, opts, x, y) = l.split()
-        if mp == root:
-            return fstype
-    else:
-        raise Exception, 'Path %s is not a known file system'
+        if fstype in excluded_fstypes:
+            excluded_devices.append(os.lstat(mp).st_dev)
+    return excluded_devices
+
+### Make a list of excluded (mount) devices:
+excluded_devices = find_excluded_devices()
 
 for root, dirs, files in os.walk(parent, topdown=True):
 
-    ### Skip certain filesystems
-    if os.path.ismount(root):
-        if fstype(root) in excluded_fstypes:
-            if debug:
-                print >>sys.stderr, 'DEBUG: Ignoring file system %s with type %s' % (root, fstype(root))
-#                raise
-            continue
+    ### For speed, drop every root that is on an excluded device number
+    if os.lstat(root).st_dev in excluded_devices:
+        continue
 
     ### Find paths that require remapping and store them
     for path in dirs + files:
