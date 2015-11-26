@@ -26,22 +26,10 @@ VERSION = '0.1'
 #parser = optparse.OptionParser(version='%prog %s' % VERSION)
 #parser
 
-### TODO: Check how df identifies 'normal' file systems
+### FIXME: Allow the user to influence this on the commandline
 ### TODO: Maybe use and include-list instead, or allow both ?
-excluded_fstypes = (
-    'autofs',
-    'binfmt_misc',
-    'devpts',
-    'devtmpfs',
-    'nfs',
-    'nfs4',
-    'nfsd',
-    'proc',
-    'rpc_pipefs',
-    'selinuxfs',
-    'sysfs',
-    'tmpfs',
-)
+excluded_fstypes = ( 'cifs', 'nfs', 'nfs4', 'sshfs', )
+#included_fstypes = ( 'ext3', 'ext4', 'xfs', )
 
 database = 'remapid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime())
 debug = True
@@ -74,12 +62,20 @@ gidmap = {
 if len(sys.argv) > 1:
     parent = sys.argv[1]
 
+### TODO: Allow to exclude specific filesystem types (e.g. nfs, nfs4, etc...)
 def find_excluded_devices():
     ''' Return a list of file system devices that are excluded '''
     excluded_devices = []
     for l in open('/proc/mounts', 'r'):
         (dev, mp, fstype, opts, x, y) = l.split()
+        s = os.statvfs(mp)
+        if s.f_blocks == 0:
+            if debug:
+                print >>sys.stderr, 'DEBUG: Exclude pseudo filesystem %s of type %s' % (mp, fstype)
+            excluded_devices.append(os.lstat(mp).st_dev)
         if fstype in excluded_fstypes:
+            if debug:
+                print >>sys.stderr, 'DEBUG: Exclude filesystem %s of type %s' % (mp, fstype)
             excluded_devices.append(os.lstat(mp).st_dev)
     return excluded_devices
 
