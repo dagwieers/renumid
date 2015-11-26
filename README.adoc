@@ -89,11 +89,6 @@ The following potential issues should be considered:
   -X          - exclude file system types (nfs, nfs4)
 
 
-=== Index options
-  -c          - clean index file
-  -m          - merge index file (do we want this ?)
-
-
 === Status options
   -u          - list the files for specific UIDs
   -g          - list the files for specific GIDs
@@ -102,6 +97,9 @@ The following potential issues should be considered:
 === Remap options
   -t          - test the changes, without actually changing
 
+
+=== Restore options
+No specific options.
 
 === Examples
 
@@ -124,8 +122,9 @@ Or could become something more efficient (storage and speed-wise).
 
 The file system index stores the following information:
 
- - A version number
- - A set of excluded devices (?)
+ - A version number of the file format (to detect incompatible files)
+ - A set of excluded devices (so it is clear what the scope is)
+ - The time it took to create the file system index
  - The scope (parents) that require changes
  - The actual mapping used for the index
  - The list of paths and original uids/gids
