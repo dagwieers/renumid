@@ -57,6 +57,31 @@ def info(level, msg):
     if options.verbose >= level:
         print msg
 
+def lchown(path, uid=None, gid=None):
+    if options.verbose > 0:
+        if uid is None and gid is not None:
+            info(1, 'Set path %s to gid %d' % (path, gid))
+        elif uid is not None and gid is None:
+            info(1, 'Set path %s to uid %d' % (path, uid))
+        elif uid is not None and gid is not None:
+            info(1, 'Set path %s to uid %d and gid to %d' % (path, uid, gid))
+        else:
+            raise 'Should not happen !'
+
+    if options.test:
+        return
+
+    if uid == None:
+        uid = os.lstat(path).st_uid
+    if gid == None:
+        gid = os.lstat(path).st_gid
+
+    try:
+        os.lchown(path, uid, gid)
+    except OSError, e:
+        print >>sys.stderr, 'WARNING: %s' % e
+
+
 ### TODO: Allow to exclude specific filesystem types (e.g. nfs, nfs4, etc...)
 def find_excluded_devices():
     ''' Return a list of file system devices that are excluded '''
@@ -215,37 +240,26 @@ if subcommand == 'status':
 ### REMAP mode
 if subcommand == 'remap':
 
-    for uid in store['uid'].keys():
+    ### Remap ownership based on stored uidmap/gidmap
+    for uid in store['uidmap'].keys():
+        if uid not in store['uid'].keys(): continue
         for path in store['uid'][uid]:
-            nuid = uidmap[uid]
-            gid = os.lstat(path).st_gid
-            info(1, 'Set path %s to uid %d' % (path, nuid))
-            if not options.test:
-                os.lchown(path, nuid, gid)
+            lchown(path, uid=uidmap[uid])
 
-    for gid in store['gid'].keys():
+    for gid in store['gidmap'].keys():
+        if gid not in store['gid'].keys(): continue
         for path in store['gid'][gid]:
-            ngid = gidmap[gid]
-            uid = os.lstat(path).st_uid
-            info(1, 'Set path %s to gid %d' % (path, ngid))
-            if not options.test:
-                os.lchown(path, uid, ngid)
+            lchown(path, gid=gidmap[gid])
 
 
 ### RESTORE mode
 if subcommand == 'restore':
 
+    ### Restore ownership based on stored ownerships
     for uid in store['uid'].keys():
         for path in store['uid'][uid]:
-            gid = os.lstat(path).st_gid
-            info(1, 'Set path %s to uid %d' % (path, uid))
-            if not options.test:
-                os.lchown(path, uid, gid)
+            lchown(path, uid=uid)
 
     for gid in store['gid'].keys():
         for path in store['gid'][gid]:
-            uid = os.lstat(path).st_uid
-            info(1, 'Set path %s to gid %d' % (path, gid))
-            if not options.test:
-                os.lchown(path, uid, gid)
-
+            lchown(path, gid=gid)
