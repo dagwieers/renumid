@@ -1,2 +1,115 @@
-# remapid
-A tool to remap UIDs/GIDs on file systems
+= remapid - A tool to remap UIDs/GIDs on file systems
+
+
+== Use case
+Typically when consolidating environments, or moving standalone systems into
+a consolidated directory existing users and groups with conflicting UIDs and
+GIDs have to be remapped. Part of this process means you have to safely and
+efficiently modify the file systems and bring the AS-IS situation into line
+with the wanted TO-BE end-result.
+
+This is exactly what remapid intends to help with.
+
+
+== Two-phase approach
+Intuitively one would scan the filesystem for a specific UID or GID, once
+identified you'd change the ownership to the new state, continue with the
+next files until all files, and all UIDs/GIDs are dealt with. Often the UNIX
+'find' utility is used for this like:
+
+    find / -uid 1234 -exec chown 3456 {} \;
+    find / -uid 3456 -exec chown 5678 {} \;
+
+However this poses a few problems:
+
+  - You will need to scan the whole filesystem for each UID/GID to process.
+    This takes a lot of time and is far from efficient
+
+  - You risk ending up with the wrong end-result. If you are not careful
+    (like the above example) you may be remapping already mapped files in
+    a subsequent action. Creating a situation that you cannot restore easily.
+
+  - Changes that requires both UID and GID changes cannot be easily dealt with.
+
+  - If the process (for whatever reason is interrupted) replaying the remaining
+    actions is tedious and time-consuming.
+
+The solution to this is to use a two-phased approach.
+
+  1. First index the file system and identify all paths that requires a change.
+
+  2. Use this index to efficiently perform the needed remapping.
+
+Since this index not just stores the paths, but also the original state. One
+can extract exactly the intended end-result, and the required work to get there.
+(e.g. the number of atomic file system actions to perform)
+
+A two phased approach also allows to prepare the required actions before the
+migration itself takes place, and can help to assess the required migration
+time for individual systems. As such file system remapping can potentially
+be very time-consuming one can much better predict the required downtime
+needed for the migration.
+
+
+== Potential issues
+The following potential issues should be considered:
+
+ - Symlinks should not be followed (no-dereference)
+ - Specific file systems should be excluded
+ - Crossing file systems boundaries may not be wanted
+ - File systems are mounted inside file systems (so device nr is important)
+ - Python os.walk provides every directory as a root, so we need to store excluded device nrs
+
+
+== Usage
+
+=== Commands
+
+  remapid index   - Create a filesystem index of impacted paths
+  remapid status  - Show a status report of impacted paths and affected UIDs/GIDs
+  remapid remap   - Remap the impacted paths according to the provided map
+
+
+=== General options
+  -f <index>  - the index file to create/use
+                (default: /var/cache/remapid/remapid-<date>-<time>.idx)
+  -m <map>    - the map file to use
+                (default: remapid.map)
+  -d          - enabled debug
+  -v          - be more verbose
+  -x          - do not cross filesystem boundaries
+  -I          - include file system types (ext3, ext4)
+  -X          - exclude file system types (nfs, nfs4)
+
+
+=== Index options
+  -c          - clean index file
+  -m          - merge index file (do we want this ?)
+
+
+=== Status options
+  -u          - list the files for specific UIDs
+  -g          - list the files for specific GIDs
+
+
+=== Remap options
+  -t          - test the changes, without actually changing
+
+
+=== Examples
+
+  remapid index -f remapid-20151126-1912.idx -m mapping.yaml /home /usr
+  remapid status -f remapid-20151126-1912.idx
+  remapid remap -f remapid-20151126-1912.idx -m mapping.yaml
+
+
+== File format
+
+=== map
+The map is created as YAML or JSON file.
+Or potentially a CSV file.
+
+=== file system index
+The file system index will be a pickle file with a specific remapid data structure.
+
+Or could become something more efficient (storage and speed-wise).
