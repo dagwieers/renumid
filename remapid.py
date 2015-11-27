@@ -20,6 +20,8 @@ import os
 import optparse
 import cPickle as pickle
 import time
+import pprint
+from datetime import datetime
 
 VERSION = '0.1'
 FORMAT_VERSION = 1
@@ -54,11 +56,11 @@ def debug(msg):
         print >>sys.stderr, 'DEBUG:', msg
 
 def info(level, msg):
-    if options.verbose >= level:
+    if options.verbosity >= level:
         print msg
 
 def lchown(path, uid=None, gid=None):
-    if options.verbose > 0:
+    if options.verbosity > 0:
         if uid is None and gid is not None:
             info(1, 'Set path %s to gid %d' % (path, gid))
         elif uid is not None and gid is None:
@@ -105,7 +107,7 @@ parser.add_option( '-f', '--file', action='store',
 parser.add_option( '-t', '--test', action='store_true',
     dest='test', help='Test the run without actually changing anything.' )
 parser.add_option( '-v', '--verbose', action='count',
-    dest='verbose', help='Be more and more and more verbose.' )
+    dest='verbosity', help='Be more and more and more verbose.' )
 
 group = optparse.OptionGroup(parser, "Index options",
                     "These options only apply to Index mode.")
@@ -137,7 +139,7 @@ if subcommand == 'index':
     store = {
       'parents': parents,
       'version': FORMAT_VERSION,
-      'start': time.localtime(),
+      'start': datetime.now(),
       'uid': { },
       'gid': { },
     }
@@ -145,12 +147,13 @@ if subcommand == 'index':
     ### Make a list of excluded (mount) devices:
     excluded_devices = find_excluded_devices()
 
-    retained_path_count = 0
-    total_path_count = 0
+    uid_paths_retained = 0
+    gid_paths_retained = 0
+    paths_scanned = 0
 
     for parent in parents:
 
-        if options.verbose > 0:
+        if options.verbosity > 0:
             print 'Processing %s' % parent
 
         for root, dirs, files in os.walk(parent, topdown=False):
@@ -161,13 +164,13 @@ if subcommand == 'index':
 
             ### Find paths that require remapping and store them
             for path in dirs + files:
+                paths_scanned += 1
+
                 ### Make path absolute
                 path = os.path.join(root, path)
-                total_path_count += 1
 
                 try:
                     s = os.lstat(path)
-#                    print path, s.st_uid, s.st_gid
                 except OSError, e:
                     print >>sys.stderr, 'WARNING: %s' % e
 
@@ -177,7 +180,7 @@ if subcommand == 'index':
                         store['uid'][s.st_uid] = [ path ]
                     else:
                         store['uid'][s.st_uid].append(path)
-                    retained_path_count += 1
+                    uid_paths_retained += 1
 
                 if s.st_gid in gidmap.keys():
                     info(2, 'Found path %s owned by gid %d' % (path, s.st_gid))
@@ -185,32 +188,32 @@ if subcommand == 'index':
                         store['gid'][s.st_gid] = [ path ]
                     else:
                         store['gid'][s.st_gid].append(path)
-                    retained_path_count += 1
+                    gid_paths_retained += 1
 
-    store['duration'] = time.clock()
-    store['stop'] = time.localtime()
+    store['stop'] = datetime.now()
+    store['runtime'] = store['stop'] - store['start']
+    store['cputime'] = time.clock()
     store['uidmap'] = uidmap
     store['gidmap'] = gidmap
+    store['uid_paths_retained'] = uid_paths_retained
+    store['gid_paths_retained'] = gid_paths_retained
+    store['paths_scanned'] = paths_scanned
 
     if options.debug:
         print '--------'
-        print store
+        pprint.pprint(store)
         print '--------'
 
     ### FIXME: Handle the case where the file already exists using tempfile
-    ### Dump database
+    ### Dump store
     try:
         pickle.dump(store, open(options.index, 'wb'))
     except:
         print >>sys.stderr, 'ERROR: Unable to dump index %s !' % options.index
         raise
 
-    print >>sys.stderr, 'Index file written to %s' % options.index
-
-    if options.verbose > 0:
-        print >>sys.stderr, 'Number of paths retained:', retained_path_count
-        print >>sys.stderr, 'Total number of paths processed:', total_path_count
-        print >>sys.stderr, 'Total time:', store['duration'], 'secs'
+    if options.verbosity == 0 and not options.debug:
+        sys.exit(0)
 
 
 if subcommand in ('status', 'remap', 'restore'):
@@ -227,20 +230,35 @@ if subcommand in ('status', 'remap', 'restore'):
 
 
 ### STATUS mode
-if subcommand == 'status':
+if subcommand in ('index', 'status'):
 
-    print 'Index file %s' % options.index
+    print 'Index file name %s' % options.index
     print
 
     print '  Version:', store['version']
-    print '  Date:', time.strftime("%a, %d %b %Y %H:%M:%S +0000", store['start'])
-    print '  Duration:', store['duration'], 'secs'
+    print '  Date:', store['start'].strftime("%a, %d %b %Y %H:%M:%S +0000")
+    print '  Parents:', ' '.join(store['parents'])
+    print
+
+    print 'Indexing stats'
+    print
+
+    print '  Number of UID paths retained:', store['uid_paths_retained']
+    print '  Number of GID paths retained:', store['gid_paths_retained']
+    print '  Total number of paths processed:', store['paths_scanned']
+    print '  Total cputime: %.2f secs' % store['cputime']
+    print '  Total runtime: %.2f secs' % (store['runtime'].seconds + store['runtime'].microseconds * 1.0 / 1000000)
+    print
+
+    if options.debug:
+        print '--------'
+        pprint.pprint(store)
+        print '--------'
 
 
-### REMAP mode
+### REMAP mode - remap ownership based on stored uidmap/gidmap
 if subcommand == 'remap':
 
-    ### Remap ownership based on stored uidmap/gidmap
     for uid in store['uidmap'].keys():
         if uid not in store['uid'].keys(): continue
         for path in store['uid'][uid]:
@@ -252,10 +270,9 @@ if subcommand == 'remap':
             lchown(path, gid=gidmap[gid])
 
 
-### RESTORE mode
+### RESTORE mode - restore based on stored ownerships
 if subcommand == 'restore':
 
-    ### Restore ownership based on stored ownerships
     for uid in store['uid'].keys():
         for path in store['uid'][uid]:
             lchown(path, uid=uid)
