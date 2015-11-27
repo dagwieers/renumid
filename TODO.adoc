@@ -35,3 +35,4 @@
 - Remember which devices were already scanned so we can skip bind-mounts with certainty
 - Support both 'renumid renumber' and 'renumid-renumber' calls
 - Warn on running processes using any of these UIDs/GIDs
+- Restore setuid ot setgid permissions after update

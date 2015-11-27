@@ -1,4 +1,4 @@
-= renumid - Renumber/Remap UIDs/GIDs on file systems efficiently
+= Renumber UIDs/GIDs on file systems efficiently
 
 
 == Use case
