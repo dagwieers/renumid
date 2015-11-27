@@ -54,7 +54,15 @@ def info(level, msg):
     if options.verbosity >= level:
         print msg
 
+def warn(msg):
+    print >>sys.stderr, 'WARNING:', msg
+
+def error(rc, msg):
+    print >>sys.stderr, 'ERROR:', msg
+    sys.exit(rc)
+
 def lchown(path, uid=None, gid=None):
+    '''Change ownership of files, report or test.'''
     if options.verbosity > 0:
         if uid is None and gid is not None:
             info(1, 'Set path %s to gid %d' % (path, gid))
@@ -76,8 +84,7 @@ def lchown(path, uid=None, gid=None):
     try:
         os.lchown(path, uid, gid)
     except OSError, e:
-        print >>sys.stderr, 'WARNING: %s' % e
-
+        warn(e)
 
 def find_excluded_devices():
     ''' Return a list of file system devices that are excluded '''
@@ -121,8 +128,10 @@ parser.set_defaults(fstypes='ext3,ext4,xfs')
 
 subcommand = args[0]
 if subcommand not in subcommands:
-    print >>sys.stderr, 'ERROR: Subcommand \'%s\' unknown, should be one of %s.' % (args[0], subcommands)
-    sys.exit(1)
+    error(1, 'Subcommand \'%s\' unknown, should be one of %s.' % (args[0], subcommands))
+elif subcommand in ('index', 'renumber', 'restore'):
+    if os.geteuid() != 0:
+        error(2, 'Subcommand \'%s\' should be run as root' % subcommand)
 
 included_fstypes = options.fstypes.split(',')
 
@@ -170,7 +179,7 @@ if subcommand == 'index':
                 try:
                     s = os.lstat(path)
                 except OSError, e:
-                    print >>sys.stderr, 'WARNING: %s' % e
+                    warn(e)
 
                 if s.st_uid in uidmap.keys():
                     info(2, 'Found path %s owned by uid %d' % (path, s.st_uid))
@@ -206,9 +215,8 @@ if subcommand == 'index':
     ### Dump store
     try:
         pickle.dump(store, open(options.index, 'wb'))
-    except:
-        print >>sys.stderr, 'ERROR: Unable to dump index %s !' % options.index
-        raise
+    except Exception, e:
+        error(3, 'Unable to dump Index file %s !\n%s' % (options.index, e)
 
     if options.verbosity == 0 and not options.debug:
         sys.exit(0)
@@ -216,15 +224,14 @@ if subcommand == 'index':
 
 if subcommand in ('status', 'renumber', 'restore'):
 
-    ### Open database (if exists and consistent)
+    ### Open index file (if exists and consistent)
     if os.path.lexists(options.index):
         try:
             store = pickle.load(open(options.index, 'rb'))
-        except:
-            print >>sys.stderr, 'WARNING: Problem reading from database %s, dropping' % database
+        except Exception, e:
+            error(4, 'Problem reading from Index file %s.\n%s' % (options.index, e))
     else:
-        print >>sys.stderr, 'ERROR: Index file %s could not be found.' % options.index
-        sys.exit(1)
+        error(5, 'Index file %s could not be found.' % options.index)
 
 
 ### STATUS mode
