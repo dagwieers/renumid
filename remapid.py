@@ -26,11 +26,6 @@ from datetime import datetime
 VERSION = '0.1'
 FORMAT_VERSION = 1
 
-### FIXME: Allow the user to influence this on the commandline
-### TODO: Maybe use an include-list instead, or allow both ?
-excluded_fstypes = ( 'cifs', 'nfs', 'nfs4', 'sshfs', )
-#included_fstypes = ( 'ext3', 'ext4', 'xfs', )
-
 ### TODO: Example mapping for testing on /dev and /tmp (to be stored in an external file)
 uidmap = {
   10: 10010,   # uucp
@@ -84,7 +79,6 @@ def lchown(path, uid=None, gid=None):
         print >>sys.stderr, 'WARNING: %s' % e
 
 
-### TODO: Allow to exclude specific filesystem types (e.g. nfs, nfs4, etc...)
 def find_excluded_devices():
     ''' Return a list of file system devices that are excluded '''
     excluded_devices = []
@@ -94,31 +88,34 @@ def find_excluded_devices():
         if s.f_blocks == 0:
             debug('Exclude pseudo filesystem %s of type %s' % (mp, fstype))
             excluded_devices.append(os.lstat(mp).st_dev)
-        if fstype in excluded_fstypes:
+        elif included_fstypes and fstype not in included_fstypes:
             debug('Exclude filesystem %s of type %s' % (mp, fstype))
             excluded_devices.append(os.lstat(mp).st_dev)
     return excluded_devices
 
 parser = optparse.OptionParser(version='%prog '+VERSION)
 parser.add_option( '-d', '--debug', action='store_true',
-    dest='debug', help='Enable debug mode.' )
+    dest='debug', help='Enable debug mode' )
 parser.add_option( '-f', '--file', action='store',
-    dest='index', help='Index file to store to/read from.' )
+    dest='index', help='Index file to store to/read from' )
 parser.add_option( '-t', '--test', action='store_true',
-    dest='test', help='Test the run without actually changing anything.' )
+    dest='test', help='Test the run without actually changing anything' )
 parser.add_option( '-v', '--verbose', action='count',
-    dest='verbosity', help='Be more and more and more verbose.' )
+    dest='verbosity', help='Be more and more and more verbose' )
 
 group = optparse.OptionGroup(parser, "Index options",
-                    "These options only apply to Index mode.")
+                    "These options only apply to Index mode")
 group.add_option('-m', '--map', action='store',
-    dest='map', help='Map file to use for UID/GID remapping.' )
+    dest='map', help='Map file to use for UID/GID remapping' )
+group.add_option('-T', '--fstypes', action='store',
+    dest='fstypes', help='List of filesystem types to index' )
 group.add_option('-x', '--one-file-system', action='store_true',
-    dest='nocross', help='Don\'t cross device boundaries.' )
+    dest='nocross', help='Don\'t cross device boundaries' )
 parser.add_option_group(group)
 
 ### Set the default index name
 parser.set_defaults(index='remapid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime()))
+parser.set_defaults(fstypes='ext3,ext4,xfs')
 
 (options, args) = parser.parse_args()
 
@@ -127,6 +124,7 @@ if subcommand not in subcommands:
     print >>sys.stderr, 'ERROR: Subcommand \'%s\' unknown, should be one of %s.' % (args[0], subcommands)
     sys.exit(1)
 
+included_fstypes = options.fstypes.split(',')
 
 ### INDEX mode
 if subcommand == 'index':
