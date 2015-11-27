@@ -3,7 +3,6 @@
 
 == Options and arguments
 - Implement better subcommand support (but argparse does not ship with RHEL5)
-- Add options to select specific filesystem types only (-T ext3,ext4,xfs)
 - Add options to select specific restore uids/gids (-U 12,23 or -G 32,21)
 - Add option to not cross file system boundaries (-x / --one-file-system)
 
@@ -14,16 +13,19 @@
 
 
 == Store format
-- Add statistics to store
+- Store both uid and gid per path
+- More efficiently handle paths requiring both a uid and gid change
 - Use something better than pickle
 
 
 == Miscellaneous
 - Handle case where Index file already exists (during dump)
-- Improve document
+- Improve documentation
 - Add manual page
+- Send specific events to syslog
 
 
 == Optional
 - Option to create a full index (discard map)
 - Option to switch remap/restore based on uidmap/gidmap or complete store
+- Apply operations in 'chrooted' mode (in case filesystems are mounted elsewhere)
