@@ -1,4 +1,4 @@
-= remapid - A tool to remap UIDs/GIDs on file systems
+= remapid - Remap UIDs/GIDs on file systems efficiently
 
 
 == Use case
@@ -12,7 +12,7 @@ This is exactly what remapid intends to help with.
 
 
 == Two-phase approach
-Intuitively one would scan the filesystem for a specific UID or GID, once
+Intuitively one would scan the filesystems for a specific UID or GID, once
 identified you'd change the ownership to the new state, continue with the
 next files until all files, and all UIDs/GIDs are dealt with. Often the UNIX
 'find' utility is used for this like:
@@ -29,16 +29,16 @@ However this poses a few problems:
     (like the above example) you may be remapping already mapped files in
     a subsequent action. Creating a situation that you cannot restore easily.
 
-  - Changes that requires both UID and GID changes cannot be easily dealt with.
+  - Changes that require both UID and GID changes cannot be easily dealt with.
 
   - If the process (for whatever reason is interrupted) replaying the remaining
     actions is tedious and time-consuming.
 
 The solution to this is to use a two-phased approach.
 
-  1. First index the file system and identify all paths that requires a change.
+  1. First index the file system and identify all paths that require a change.
 
-  2. Use this index to efficiently perform the needed remapping.
+  2. Use this Index file to efficiently perform the needed remapping.
 
 Since this index not just stores the paths, but also the original state. One
 can extract exactly the intended end-result, and the required work to get there.
@@ -52,19 +52,22 @@ needed for the migration.
 
 For this reason we added 2 optional steps.
 
-  3. A step that can report on what changes are to be expected
+  3. A step that can report on what changes are to be expected from the Index file
 
-  4. A step that can restore the original state (or benchmark the needed actions)
+  4. A step that can restore the original state or can be used benchmark the needed atomic actions (without impact)
+
+//  5. A step to validate the Index file against the current system (files missing, ownership changes)
 
 
-== Potential issues
+== Implementation details
 The following potential issues should be considered:
 
- - Symlinks should not be followed (no-dereference)
- - Specific file systems should be excluded
+ - Symlinks should not be followed (no-dereference) - DONE
+ - Pseudo file systems should be excluded - DONE
  - Crossing file systems boundaries may not be wanted
- - File systems are mounted inside file systems (so device nr is important)
- - Python os.walk provides every directory as a root, so we need to store excluded device nrs
+ - File systems are mounted inside file systems (so device nr is important) - DONE
+ - Python os.walk provides every directory as a (new) root, so we need to store excluded device nrs - DONE
+ - Bind mounts need to be handled carefully (keep a list of scanned device nrs ?)
 
 
 == Usage
@@ -79,14 +82,13 @@ The following potential issues should be considered:
 
 === General options
   -f <index>  - the index file to create/use
-                (default: /var/cache/remapid/remapid-<date>-<time>.idx)
+                (default: remapid-<date>-<time>.idx)
   -m <map>    - the map file to use
                 (default: remapid.map)
-  -d          - enabled debug
+  -d          - enable debugging output
   -v          - be more verbose
   -x          - do not cross filesystem boundaries
-  -I          - include file system types (ext3, ext4)
-  -X          - exclude file system types (nfs, nfs4)
+  -T          - include only these file system types (eg. ext3,ext4,xfs)
 
 
 === Status options
@@ -124,6 +126,7 @@ The file system index stores the following information:
 
  - A version number of the file format (to detect incompatible files)
  - A set of excluded devices (so it is clear what the scope is)
+ - Statistics (time, duration, paths scanned, ...)
  - The time it took to create the file system index
  - The scope (parents) that require changes
  - The actual mapping used for the index
