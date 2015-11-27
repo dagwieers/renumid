@@ -27,5 +27,5 @@
 
 == Optional
 - Option to create a full index (discard map)
-- Option to switch remap/restore based on uidmap/gidmap or complete store
+- Option to switch renumber/restore based on uidmap/gidmap or complete store
 - Apply operations in 'chrooted' mode (in case filesystems are mounted elsewhere)

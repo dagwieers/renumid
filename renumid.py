@@ -44,7 +44,7 @@ gidmap = {
   505: 10505,  # vboxusers
 }
 
-subcommands = ('index', 'status', 'remap', 'restore')
+subcommands = ('index', 'status', 'renumber', 'restore')
 
 def debug(msg):
     if options.debug:
@@ -106,7 +106,7 @@ parser.add_option( '-v', '--verbose', action='count',
 group = optparse.OptionGroup(parser, "Index options",
                     "These options only apply to Index mode")
 group.add_option('-m', '--map', action='store',
-    dest='map', help='Map file to use for UID/GID remapping' )
+    dest='map', help='Map file to use for UID/GID renumbering' )
 group.add_option('-T', '--fstypes', action='store',
     dest='fstypes', help='List of filesystem types to index' )
 group.add_option('-x', '--one-file-system', action='store_true',
@@ -114,7 +114,7 @@ group.add_option('-x', '--one-file-system', action='store_true',
 parser.add_option_group(group)
 
 ### Set the default index name
-parser.set_defaults(index='remapid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime()))
+parser.set_defaults(index='renumid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime()))
 parser.set_defaults(fstypes='ext3,ext4,xfs')
 
 (options, args) = parser.parse_args()
@@ -160,7 +160,7 @@ if subcommand == 'index':
             if os.lstat(root).st_dev in excluded_devices:
                 continue
 
-            ### Find paths that require remapping and store them
+            ### Find paths that require renumbering and store them
             for path in dirs + files:
                 paths_scanned += 1
 
@@ -214,7 +214,7 @@ if subcommand == 'index':
         sys.exit(0)
 
 
-if subcommand in ('status', 'remap', 'restore'):
+if subcommand in ('status', 'renumber', 'restore'):
 
     ### Open database (if exists and consistent)
     if os.path.lexists(options.index):
@@ -254,8 +254,8 @@ if subcommand in ('index', 'status'):
         print '--------'
 
 
-### REMAP mode - remap ownership based on stored uidmap/gidmap
-if subcommand == 'remap':
+### RENUMBER mode - renumber ownership based on stored uidmap/gidmap
+if subcommand == 'renumber':
 
     for uid in store['uidmap'].keys():
         if uid not in store['uid'].keys(): continue

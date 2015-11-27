@@ -1,14 +1,14 @@
-= remapid - Remap UIDs/GIDs on file systems efficiently
+= renumid - Renumber/Remap UIDs/GIDs on file systems efficiently
 
 
 == Use case
 Typically when consolidating environments, or moving standalone systems into
 a consolidated directory existing users and groups with conflicting UIDs and
-GIDs have to be remapped. Part of this process means you have to safely and
+GIDs have to be renumbered. Part of this process means you have to safely and
 efficiently modify the file systems and bring the AS-IS situation into line
 with the wanted TO-BE end-result.
 
-This is exactly what remapid intends to help with.
+This is exactly what renumid intends to help with.
 
 
 == Two-phase approach
@@ -26,7 +26,7 @@ However this poses a few problems:
     This takes a lot of time and is far from efficient
 
   - You risk ending up with the wrong end-result. If you are not careful
-    (like the above example) you may be remapping already mapped files in
+    (like the above example) you may be renumbering already mapped files in
     a subsequent action. Creating a situation that you cannot restore easily.
 
   - Changes that require both UID and GID changes cannot be easily dealt with.
@@ -38,7 +38,7 @@ The solution to this is to use a two-phased approach.
 
   1. First index the file system and identify all paths that require a change.
 
-  2. Use this Index file to efficiently perform the needed remapping.
+  2. Use this Index file to efficiently perform the needed renumbering.
 
 Since this index not just stores the paths, but also the original state. One
 can extract exactly the intended end-result, and the required work to get there.
@@ -46,7 +46,7 @@ can extract exactly the intended end-result, and the required work to get there.
 
 A two phased approach also allows to prepare the required actions before the
 migration itself takes place, and can help to assess the required migration
-time for individual systems. As such file system remapping can potentially
+time for individual systems. As such file system renumbering can potentially
 be very time-consuming one can much better predict the required downtime
 needed for the migration.
 
@@ -74,17 +74,17 @@ The following potential issues should be considered:
 
 === Commands
 
-  remapid index   - Create a filesystem index of impacted paths using a map
-  remapid status  - Show a status report of impacted paths and affected UIDs/GIDs
-  remapid remap   - Remap the impacted paths according to the provided map
-  remapid restore - Restore the original situation using the filesystem index
+  renumid index   - Create a filesystem index of impacted paths using a map
+  renumid status  - Show a status report of impacted paths and affected UIDs/GIDs
+  renumid renumber   - Renumber the impacted paths according to the provided map
+  renumid restore - Restore the original situation using the filesystem index
 
 
 === General options
   -f <index>  - the index file to create/use
-                (default: remapid-<date>-<time>.idx)
+                (default: renumid-<date>-<time>.idx)
   -m <map>    - the map file to use
-                (default: remapid.map)
+                (default: renumid.map)
   -d          - enable debugging output
   -v          - be more verbose
   -x          - do not cross filesystem boundaries
@@ -96,7 +96,7 @@ The following potential issues should be considered:
   -g          - list the files for specific GIDs
 
 
-=== Remap options
+=== Renumber options
   -t          - test the changes, without actually changing
 
 
@@ -105,10 +105,10 @@ No specific options.
 
 === Examples
 
-  remapid index -f remapid-20151126-1912.idx -m mapping.yaml /home /usr
-  remapid status -f remapid-20151126-1912.idx
-  remapid remap -f remapid-20151126-1912.idx
-  remapid restore -f remapid-20151126-1912.idx
+  renumid index -f renumid-20151126-1912.idx -m mapping.yaml /home /usr
+  renumid status -f renumid-20151126-1912.idx
+  renumid renumber -f renumid-20151126-1912.idx
+  renumid restore -f renumid-20151126-1912.idx
 
 
 == File format
@@ -118,7 +118,7 @@ The map is created as YAML or JSON file.
 Or potentially a CSV file.
 
 === File system index
-The file system index will be a pickle file with a specific remapid data structure.
+The file system index will be a pickle file with a specific renumid data structure.
 
 Or could become something more efficient (storage and speed-wise).
 
