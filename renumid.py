@@ -100,7 +100,15 @@ def find_excluded_devices():
             excluded_devices.append(os.lstat(mp).st_dev)
     return excluded_devices
 
-parser = optparse.OptionParser(version='%prog '+VERSION)
+parser = optparse.OptionParser(
+    version='%prog '+VERSION,
+    description='''Subcommands:                                                                   
+  index          Create a file system index of impacted paths using a map        
+  status         Show a status report of impacted paths and affected UIDs/GIDs   
+  renumber       Renumber the impacted paths according to the stored map         
+  restore        Restore the original situation using the file system index      
+'''
+)
 parser.add_option( '-d', '--debug', action='store_true',
     dest='debug', help='Enable debug mode' )
 parser.add_option( '-f', '--file', action='store',
@@ -120,18 +128,24 @@ group.add_option('-x', '--one-file-system', action='store_true',
     dest='nocross', help='Don\'t cross device boundaries' )
 parser.add_option_group(group)
 
+parser.set_usage('Usage: %prog [subcommand] [options]')
+
 ### Set the default index name
 parser.set_defaults(index='renumid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime()))
 parser.set_defaults(fstypes='ext3,ext4,xfs')
 
 (options, args) = parser.parse_args()
 
+if not args:
+    parser.error('Subcommand not provided, should be one of %s' % (subcommands,))
+
 subcommand = args[0]
 if subcommand not in subcommands:
-    error(1, 'Subcommand \'%s\' unknown, should be one of %s.' % (args[0], subcommands))
+    parser.error('Subcommand \'%s\' unknown, should be one of %s' % (subcommand, subcommands))
+
 elif subcommand in ('index', 'renumber', 'restore'):
     if os.geteuid() != 0:
-        error(2, 'Subcommand \'%s\' should be run as root' % subcommand)
+        error(12, 'Subcommand \'%s\' should be run as root' % subcommand)
 
 included_fstypes = options.fstypes.split(',')
 
@@ -216,7 +230,7 @@ if subcommand == 'index':
     try:
         pickle.dump(store, open(options.index, 'wb'))
     except Exception, e:
-        error(3, 'Unable to dump Index file %s !\n%s' % (options.index, e)
+        error(13, 'Unable to dump Index file %s !\n%s' % (options.index, e))
 
     if options.verbosity == 0 and not options.debug:
         sys.exit(0)
@@ -229,9 +243,9 @@ if subcommand in ('status', 'renumber', 'restore'):
         try:
             store = pickle.load(open(options.index, 'rb'))
         except Exception, e:
-            error(4, 'Problem reading from Index file %s.\n%s' % (options.index, e))
+            error(14, 'Problem reading from Index file %s.\n%s' % (options.index, e))
     else:
-        error(5, 'Index file %s could not be found.' % options.index)
+        error(15, 'Index file %s could not be found.' % options.index)
 
 
 ### STATUS mode
