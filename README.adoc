@@ -54,7 +54,7 @@ For this reason we added 2 optional steps.
 
   3. A step that can report on what changes are to be expected from the Index file
 
-  4. A step that can restore the original state or can be used benchmark the needed atomic actions (without impact)
+  4. A step that can restore the original state or can be used to benchmark the process (without impact)
 
 //  5. A step to validate the Index file against the current system (files missing, ownership changes)
 
@@ -115,7 +115,39 @@ No specific options.
 
 === Map
 The map is created as YAML or JSON file.
-Or potentially a CSV file.
+
+Below is an example file showing how it can be used:
+
+----
+---
+# The below UIDs/GIDs are examples to use on a RHEL /dev and /tmp file system
+
+# These maps would match for all hosts
+uidmap:
+  10: 10010      # uucp
+  42: 10042      # gdm
+gidmap:
+  5: 10005       # tty
+  16: 10016      # oprofile
+  39: 10039      # video
+
+# But you can define per-host maps, or use wildcards on FQDN
+moria*:
+  uidmap:
+    48: 10048    # apache
+    69: 10069    # vcsa
+  gidmap:
+    42: 10042    # gdm
+    69: 10069    # vcsa
+    484: 10484   # tmux
+    505: 10505   # vboxusers
+
+lisse.gent.wieers.com:
+  uidmap:
+    8: 10008     # mail
+  gidmap:
+    8: 10008     # mail
+----
 
 === File system index
 The file system index will be a pickle file with a specific renumid data structure.

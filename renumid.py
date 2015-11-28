@@ -22,27 +22,14 @@ import cPickle as pickle
 import time
 import pprint
 from datetime import datetime
+import yaml
+import fnmatch
+import socket
 
 VERSION = '0.1'
 FORMAT_VERSION = 1
 
-### TODO: Example mapping for testing on /dev and /tmp (to be stored in an external file)
-uidmap = {
-  10: 10010,   # uucp
-  42: 10042,   # gdm
-  48: 10048,   # apache
-  69: 10069,   # vcsa
-}
-
-gidmap = {
-  5: 10005,    # tty
-  16: 100016,  # oprofile
-  39: 10039,   # video
-  42: 10042,   # gdm
-  69: 10069,   # vcsa
-  484: 10484,  # tmux
-  505: 10505,  # vboxusers
-}
+hostname = socket.gethostbyaddr(socket.gethostname())[0]
 
 subcommands = ('index', 'status', 'renumber', 'restore')
 
@@ -100,6 +87,26 @@ def find_excluded_devices():
             excluded_devices.append(os.lstat(mp).st_dev)
     return excluded_devices
 
+def process_idmap(idmap):
+    global hostname
+
+    uidmap = dict()
+    gidmap = dict()
+
+    for key in idmap.keys():
+        if key == 'uidmap':
+            uidmap.update(idmap['uidmap'])
+        elif key == 'gidmap':
+            gidmap.update(idmap['gidmap'])
+        elif fnmatch.fnmatch(hostname, key):
+            if 'uidmap' in idmap[key].keys():
+                uidmap.update(idmap[key]['uidmap'])
+            if 'gidmap' in idmap[key].keys():
+                gidmap.update(idmap[key]['gidmap'])
+
+    return uidmap, gidmap
+
+
 parser = optparse.OptionParser(
     version='%prog '+VERSION,
     description='''Subcommands:                                                                   
@@ -117,7 +124,7 @@ parser.add_option( '-v', '--verbose', action='count',
     dest='verbosity', help='Be more and more and more verbose' )
 
 group1 = optparse.OptionGroup(parser, "Index options",
-                    "These options only apply to Index mode")
+    "These options only apply to Index mode")
 group1.add_option('-m', '--map', action='store',
     dest='map', help='Map file to use for UID/GID renumbering' )
 group1.add_option('-T', '--fstypes', action='store',
@@ -127,7 +134,7 @@ group1.add_option('-x', '--one-file-system', action='store_true',
 parser.add_option_group(group1)
 
 group2 = optparse.OptionGroup(parser, "Renumber/Restore options",
-                    "These options only apply to Renumber and Restore mode")
+    "These options only apply to Renumber and Restore mode")
 group2.add_option( '-t', '--test', action='store_true',
     dest='test', help='Test the run without actually changing anything' )
 parser.add_option_group(group2)
@@ -136,6 +143,7 @@ parser.set_usage('Usage: %prog [subcommand] [options]')
 
 ### Set the default index name
 parser.set_defaults(index='renumid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime()))
+parser.set_defaults(map=None)
 parser.set_defaults(fstypes='ext3,ext4,xfs')
 
 (options, args) = parser.parse_args()
@@ -157,15 +165,26 @@ included_fstypes = options.fstypes.split(',')
 ### INDEX mode
 if subcommand == 'index':
 
+    if options.map is None:
+        parser.error('Option -m/--map is required in Index mode')
+
     if len(args) < 2:
         parents = [ os.getcwd(), ]
     else:
         parents = args[1:]
 
+    try:
+        idmap = yaml.load(file(options.map, 'r'))
+    except IOError, e:
+        error(17, e)
+
+    uidmap, gidmap = process_idmap(idmap)
+
     store = {
       'parents': parents,
       'version': FORMAT_VERSION,
       'start': datetime.now(),
+      'map': options.map,
       'uid': { },
       'gid': { },
     }

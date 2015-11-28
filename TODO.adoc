@@ -7,12 +7,6 @@
 - Add option to not cross file system boundaries (-x / --one-file-system)
 
 
-== Map format
-- Define map format (YAML or CSV ? Or both ?)
-- Allow for catch-all mappings and host-specific mappings
-  (this allows to have one single mapping file for multiple systems)
-
-
 == Store format
 - Store both uid and gid per path
 - More efficiently handle paths requiring both a uid and gid change
