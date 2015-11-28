@@ -116,33 +116,33 @@ parser = optparse.OptionParser(
   restore        Restore the original situation using the file system index      
 '''
 )
-parser.add_option( '-d', '--debug', action='store_true',
-    dest='debug', help='Enable debugging' )
-parser.add_option( '-f', '--file', action='store',
-    dest='index', help='Index file to create/use' )
-parser.add_option( '-v', '--verbose', action='count',
-    dest='verbosity', help='Be more and more and more verbose' )
+parser.add_option('-d', '--debug', action='store_true',
+                  dest='debug', help='Enable debugging' )
+parser.add_option('-f', '--file', action='store',
+                  dest='index', help='Index file to create/use' )
+parser.add_option('-v', '--verbose', action='count',
+                  dest='verbosity', help='Be more and more and more verbose' )
 
 group1 = optparse.OptionGroup(parser, "Index options",
-    "These options only apply to Index mode")
+                              "These options only apply to Index mode")
 group1.add_option('-m', '--map', action='store',
-    dest='map', help='Map file to use for UID/GID renumbering' )
+                  dest='map', help='Map file to use for UID/GID renumbering' )
 group1.add_option('-T', '--fstypes', action='store',
-    dest='fstypes', help='List of filesystem types to index' )
+                  dest='fstypes', help='List of filesystem types to index' )
 group1.add_option('-x', '--one-file-system', action='store_true',
-    dest='nocross', help='Don\'t cross device boundaries' )
+                  dest='nocross', help='Don\'t cross device boundaries' )
 parser.add_option_group(group1)
 
 group2 = optparse.OptionGroup(parser, "Renumber/Restore options",
-    "These options only apply to Renumber and Restore mode")
-group2.add_option( '-t', '--test', action='store_true',
-    dest='test', help='Test the run without actually changing anything' )
+                              "These options only apply to Renumber and Restore mode")
+group2.add_option('-t', '--test', action='store_true',
+                  dest='test', help='Test the run without actually changing anything' )
 parser.add_option_group(group2)
 
 parser.set_usage('Usage: %prog [subcommand] [options]')
 
 ### Set the default index name
-parser.set_defaults(index='renumid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime()))
+parser.set_defaults(index=None)
 parser.set_defaults(map=None)
 parser.set_defaults(fstypes='ext3,ext4,xfs')
 
@@ -168,6 +168,10 @@ if subcommand == 'index':
     if options.map is None:
         parser.error('Option -m/--map is required in Index mode')
 
+    # Set default Index file name (if missing)
+    if options.index is None:
+        options.index = 'renumid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime())
+
     if len(args) < 2:
         parents = [ os.getcwd(), ]
     else:
@@ -184,7 +188,7 @@ if subcommand == 'index':
       'parents': parents,
       'version': FORMAT_VERSION,
       'start': datetime.now(),
-      'map': options.map,
+      'map': os.path.abspath(options.map),
       'uid': { },
       'gid': { },
     }
@@ -261,6 +265,9 @@ if subcommand == 'index':
 
 
 if subcommand in ('status', 'renumber', 'restore'):
+
+    if options.index is None:
+        parser.error('Option -f/--file is required in %s mode' % subcommand.title())
 
     ### Open index file (if exists and consistent)
     if os.path.lexists(options.index):
