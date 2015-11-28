@@ -110,23 +110,27 @@ parser = optparse.OptionParser(
 '''
 )
 parser.add_option( '-d', '--debug', action='store_true',
-    dest='debug', help='Enable debug mode' )
+    dest='debug', help='Enable debugging' )
 parser.add_option( '-f', '--file', action='store',
-    dest='index', help='Index file to store to/read from' )
-parser.add_option( '-t', '--test', action='store_true',
-    dest='test', help='Test the run without actually changing anything' )
+    dest='index', help='Index file to create/use' )
 parser.add_option( '-v', '--verbose', action='count',
     dest='verbosity', help='Be more and more and more verbose' )
 
-group = optparse.OptionGroup(parser, "Index options",
+group1 = optparse.OptionGroup(parser, "Index options",
                     "These options only apply to Index mode")
-group.add_option('-m', '--map', action='store',
+group1.add_option('-m', '--map', action='store',
     dest='map', help='Map file to use for UID/GID renumbering' )
-group.add_option('-T', '--fstypes', action='store',
+group1.add_option('-T', '--fstypes', action='store',
     dest='fstypes', help='List of filesystem types to index' )
-group.add_option('-x', '--one-file-system', action='store_true',
+group1.add_option('-x', '--one-file-system', action='store_true',
     dest='nocross', help='Don\'t cross device boundaries' )
-parser.add_option_group(group)
+parser.add_option_group(group1)
+
+group2 = optparse.OptionGroup(parser, "Renumber/Restore options",
+                    "These options only apply to Renumber and Restore mode")
+group2.add_option( '-t', '--test', action='store_true',
+    dest='test', help='Test the run without actually changing anything' )
+parser.add_option_group(group2)
 
 parser.set_usage('Usage: %prog [subcommand] [options]')
 
@@ -148,6 +152,7 @@ elif subcommand in ('index', 'renumber', 'restore'):
         error(12, 'Subcommand \'%s\' should be run as root' % subcommand)
 
 included_fstypes = options.fstypes.split(',')
+
 
 ### INDEX mode
 if subcommand == 'index':
