@@ -312,12 +312,12 @@ if subcommand == 'renumber':
     for uid in store['uidmap'].keys():
         if uid not in store['uid'].keys(): continue
         for path in store['uid'][uid]:
-            lchown(path, uid=uidmap[uid])
+            lchown(path, uid=store['uidmap'][uid])
 
     for gid in store['gidmap'].keys():
         if gid not in store['gid'].keys(): continue
         for path in store['gid'][gid]:
-            lchown(path, gid=gidmap[gid])
+            lchown(path, gid=store['gidmap'][gid])
 
 
 ### RESTORE mode - restore based on stored ownerships
