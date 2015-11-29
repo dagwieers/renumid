@@ -1,29 +1,31 @@
 = TODO items
 
+== Bugs
+- Handle case where Index file already exists (during start or during dump)
 
-== Options and arguments
-- Implement better subcommand support (but argparse does not ship with RHEL5)
+
+== Features
 - Add options to select specific restore uids/gids (-U 12,23 or -G 32,21)
 - Add option to not cross file system boundaries (-x / --one-file-system)
+- Warn on running processes using any of these UIDs/GIDs
+- Restore setuid ot setgid permissions after update
+- Remember which devices were already scanned so we can skip bind-mounts with certainty
+
+
+== Improvements
+- Implement better subcommand support (but argparse does not ship with RHEL5)
+- Check Index format version before use
+- Support both 'renumid renumber' and 'renumid-renumber' calls ?
 
 
 == Store format
 - Store both uid and gid per path
 - More efficiently handle paths requiring both a uid and gid change
   (requires changing the data structure)
-- Use something better than pickle
-- Check Index format version before use
+- Use something better than pickle ?
 
 
-== Miscellaneous
-- Handle case where Index file already exists (during dump)
-
-
-== Optional
+== New use-cases
 - Option to create a full index (discard the mapping)
 - Option to switch renumber/restore based on uidmap/gidmap or complete store
 - Apply operations in 'chrooted' mode (in case filesystems are mounted elsewhere)
-- Remember which devices were already scanned so we can skip bind-mounts with certainty
-- Support both 'renumid renumber' and 'renumid-renumber' calls
-- Warn on running processes using any of these UIDs/GIDs
-- Restore setuid ot setgid permissions after update
