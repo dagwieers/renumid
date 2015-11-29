@@ -13,10 +13,9 @@ all:
 docs: all
 	$(MAKE) -C docs docs
 
-install:
+install: docs-install
 #	-[ ! -f $(DESTDIR)$(sysconfdir)/dstat.conf ] && install -D -m0644 dstat.conf $(DESTDIR)$(sysconfdir)/dstat.conf
-	install -Dp -m0755 renumid $(DESTDIR)$(sbindir)/renumid
-	install -Dp -m0644 renumid.1 $(DESTDIR)$(mandir)/man1/dstat.1
+	install -Dp -m0755 renumid.py $(DESTDIR)$(sbindir)/renumid
 
 docs-install:
 	$(MAKE) -C docs install

@@ -127,15 +127,11 @@ renumid restore -f renumid-home-usr.idx
 
 
 == BUGS
-If you have improvements or bugreports, please create an issue at:
+If you have improvements or bugreports, please open an issue at:
 https://github.com/dagwieers/renumid/issues[]
 
 
 == SEE ALSO
-    chown(1), find(1)
-
-
-== AUTHOR
-Written by Dag Wieers mailto:dag@wieers.com[]
+chown(1), find(1)
 
 Homepage at http://github.com/dagwieers/renumid[]
