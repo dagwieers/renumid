@@ -111,20 +111,20 @@ parser = optparse.OptionParser(
   index          create a file system index of impacted paths using a map       
   status         show a status report of impacted paths and affected UIDs/GIDs  
   renumber       renumber the impacted paths according to the stored map        
-  restore        restore the original situation using the file system index     
+  restore        restore the original situation using the index file            
 '''
 )
-parser.add_option('-f', '--file', action='store',
-                  dest='index', help='index file to create/use' )
 parser.add_option('-v', '--verbose', action='count',
                   dest='verbosity', help='be more and more and more verbose' )
+parser.add_option('-f', '--file', action='store',
+                  dest='index', help='index file to create/use' )
 
 group1 = optparse.OptionGroup(parser, "Index options",
                               "These options only apply to Index mode")
 group1.add_option('-m', '--map', action='store',
                   dest='map', help='map file to use for UID/GID renumbering' )
 group1.add_option('-T', '--fstypes', action='store',
-                  dest='fstypes', help='list of filesystem types to index' )
+                  dest='fstypes', help='list of file system types to index' )
 #group1.add_option('-x', '--one-file-system', action='store_true',
 #                  dest='nocross', help='Don\'t cross device boundaries' )
 parser.add_option_group(group1)
