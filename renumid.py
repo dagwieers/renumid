@@ -25,6 +25,7 @@ from datetime import datetime
 import yaml
 import fnmatch
 import socket
+import syslog
 
 VERSION = '0.1'
 FORMAT_VERSION = 1
@@ -42,6 +43,7 @@ def warn(msg):
 
 def error(rc, msg):
     print >>sys.stderr, 'ERROR:', msg
+    syslog.syslog(syslog.LOG_ERROR, msg)
     sys.exit(rc)
 
 def lchown(path, uid=None, gid=None):
@@ -149,6 +151,8 @@ subcommand = args[0]
 if subcommand not in subcommands:
     parser.error('Subcommand \'%s\' unknown, should be one of %s' % (subcommand, subcommands))
 
+syslog.openlog('renumid')
+
 if subcommand in ('index', 'renumber', 'restore'):
     if os.geteuid() != 0:
         error(12, 'Subcommand \'%s\' should be run as root' % subcommand)
@@ -192,6 +196,8 @@ if subcommand == 'index':
     uid_paths_retained = 0
     gid_paths_retained = 0
     paths_scanned = 0
+
+    syslog.syslog(syslog.LOG_INFO, 'File system scanning started. Index file being generated.')
 
     for parent in parents:
 
@@ -256,6 +262,8 @@ if subcommand == 'index':
     except Exception, e:
         error(13, 'Unable to dump Index file %s !\n%s' % (options.index, e))
 
+    syslog.syslog(syslog.LOG_INFO, 'Index file finished and written as %.' % options.index)
+
     if options.verbosity == 0:
         sys.exit(0)
 
@@ -305,6 +313,8 @@ if subcommand in ('index', 'status'):
 ### RENUMBER mode - renumber ownership based on stored uidmap/gidmap
 if subcommand == 'renumber':
 
+    syslog.syslog(syslog.LOG_INFO, 'Renumbering files started.')
+
     for uid in store['uidmap'].keys():
         if uid not in store['uid'].keys(): continue
         for path in store['uid'][uid]:
@@ -315,9 +325,12 @@ if subcommand == 'renumber':
         for path in store['gid'][gid]:
             lchown(path, gid=store['gidmap'][gid])
 
+    syslog.syslog(syslog.LOG_INFO, 'Renumbering files finished.')
 
 ### RESTORE mode - restore based on stored ownerships
 if subcommand == 'restore':
+
+    syslog.syslog(syslog.LOG_INFO, 'Restoring files started.')
 
     for uid in store['uid'].keys():
         for path in store['uid'][uid]:
@@ -326,3 +339,5 @@ if subcommand == 'restore':
     for gid in store['gid'].keys():
         for path in store['gid'][gid]:
             lchown(path, gid=gid)
+
+    syslog.syslog(syslog.LOG_INFO, 'Restoring files finished.')

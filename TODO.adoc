@@ -19,7 +19,6 @@
 - Handle case where Index file already exists (during dump)
 - Improve documentation
 - Add manual page
-- Send specific events to syslog
 
 
 == Optional
