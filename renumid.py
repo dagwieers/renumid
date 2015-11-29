@@ -33,13 +33,9 @@ hostname = socket.gethostbyaddr(socket.gethostname())[0]
 
 subcommands = ('index', 'status', 'renumber', 'restore')
 
-def debug(msg):
-    if options.debug:
-        print >>sys.stderr, 'DEBUG:', msg
-
 def info(level, msg):
     if options.verbosity >= level:
-        print msg
+        print >>sys.stderr, msg
 
 def warn(msg):
     print >>sys.stderr, 'WARNING:', msg
@@ -80,10 +76,10 @@ def find_excluded_devices():
         (dev, mp, fstype, opts, x, y) = l.split()
         s = os.statvfs(mp)
         if s.f_blocks == 0:
-            debug('Exclude pseudo filesystem %s of type %s' % (mp, fstype))
+            info(3, 'Exclude pseudo filesystem %s of type %s' % (mp, fstype))
             excluded_devices.append(os.lstat(mp).st_dev)
         elif included_fstypes and fstype not in included_fstypes:
-            debug('Exclude filesystem %s of type %s' % (mp, fstype))
+            info(3, 'Exclude filesystem %s of type %s' % (mp, fstype))
             excluded_devices.append(os.lstat(mp).st_dev)
     return excluded_devices
 
@@ -110,33 +106,31 @@ def process_idmap(idmap):
 parser = optparse.OptionParser(
     version='%prog '+VERSION,
     description='''Subcommands:                                                                   
-  index          Create a file system index of impacted paths using a map        
-  status         Show a status report of impacted paths and affected UIDs/GIDs   
-  renumber       Renumber the impacted paths according to the stored map         
-  restore        Restore the original situation using the file system index      
+  index          create a file system index of impacted paths using a map       
+  status         show a status report of impacted paths and affected UIDs/GIDs  
+  renumber       renumber the impacted paths according to the stored map        
+  restore        restore the original situation using the file system index     
 '''
 )
-parser.add_option('-d', '--debug', action='store_true',
-                  dest='debug', help='Enable debugging' )
 parser.add_option('-f', '--file', action='store',
-                  dest='index', help='Index file to create/use' )
+                  dest='index', help='index file to create/use' )
 parser.add_option('-v', '--verbose', action='count',
-                  dest='verbosity', help='Be more and more and more verbose' )
+                  dest='verbosity', help='be more and more and more verbose' )
 
 group1 = optparse.OptionGroup(parser, "Index options",
                               "These options only apply to Index mode")
 group1.add_option('-m', '--map', action='store',
-                  dest='map', help='Map file to use for UID/GID renumbering' )
+                  dest='map', help='map file to use for UID/GID renumbering' )
 group1.add_option('-T', '--fstypes', action='store',
-                  dest='fstypes', help='List of filesystem types to index' )
-group1.add_option('-x', '--one-file-system', action='store_true',
-                  dest='nocross', help='Don\'t cross device boundaries' )
+                  dest='fstypes', help='list of filesystem types to index' )
+#group1.add_option('-x', '--one-file-system', action='store_true',
+#                  dest='nocross', help='Don\'t cross device boundaries' )
 parser.add_option_group(group1)
 
 group2 = optparse.OptionGroup(parser, "Renumber/Restore options",
                               "These options only apply to Renumber and Restore mode")
 group2.add_option('-t', '--test', action='store_true',
-                  dest='test', help='Test the run without actually changing anything' )
+                  dest='test', help='test the run without actually changing anything' )
 parser.add_option_group(group2)
 
 parser.set_usage('Usage: %prog [subcommand] [options]')
@@ -155,12 +149,11 @@ subcommand = args[0]
 if subcommand not in subcommands:
     parser.error('Subcommand \'%s\' unknown, should be one of %s' % (subcommand, subcommands))
 
-elif subcommand in ('index', 'renumber', 'restore'):
+if subcommand in ('index', 'renumber', 'restore'):
     if os.geteuid() != 0:
         error(12, 'Subcommand \'%s\' should be run as root' % subcommand)
 
 included_fstypes = options.fstypes.split(',')
-
 
 ### INDEX mode
 if subcommand == 'index':
@@ -202,8 +195,7 @@ if subcommand == 'index':
 
     for parent in parents:
 
-        if options.verbosity > 0:
-            print 'Processing %s' % parent
+        info(1, 'Processing parent %s' % parent)
 
         for root, dirs, files in os.walk(parent, topdown=False):
 
@@ -211,12 +203,16 @@ if subcommand == 'index':
             if os.lstat(root).st_dev in excluded_devices:
                 continue
 
+            info(2, 'Processing root %s' % root)
+
             ### Find paths that require renumbering and store them
             for path in dirs + files:
+
                 paths_scanned += 1
 
                 ### Make path absolute
                 path = os.path.join(root, path)
+                info(3, 'Processing path %s' % path)
 
                 try:
                     s = os.lstat(path)
@@ -248,7 +244,7 @@ if subcommand == 'index':
     store['gid_paths_retained'] = gid_paths_retained
     store['paths_scanned'] = paths_scanned
 
-    if options.debug:
+    if options.verbosity > 3:
         print '--------'
         pprint.pprint(store)
         print '--------'
@@ -260,7 +256,7 @@ if subcommand == 'index':
     except Exception, e:
         error(13, 'Unable to dump Index file %s !\n%s' % (options.index, e))
 
-    if options.verbosity == 0 and not options.debug:
+    if options.verbosity == 0:
         sys.exit(0)
 
 
@@ -300,7 +296,7 @@ if subcommand in ('index', 'status'):
     print '  Total runtime: %.2f secs' % (store['runtime'].seconds + store['runtime'].microseconds * 1.0 / 1000000)
     print
 
-    if options.debug:
+    if options.verbosity > 3:
         print '--------'
         pprint.pprint(store)
         print '--------'
