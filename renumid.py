@@ -262,7 +262,7 @@ if subcommand == 'index':
     except Exception, e:
         error(13, 'Unable to dump Index file %s !\n%s' % (options.index, e))
 
-    syslog.syslog(syslog.LOG_INFO, 'Index file finished and written as %.' % options.index)
+    syslog.syslog(syslog.LOG_INFO, 'Index file finished and written as %s.' % options.index)
 
     if options.verbosity == 0:
         sys.exit(0)
