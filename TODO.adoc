@@ -17,8 +17,6 @@
 
 == Miscellaneous
 - Handle case where Index file already exists (during dump)
-- Improve documentation
-- Add manual page
 
 
 == Optional

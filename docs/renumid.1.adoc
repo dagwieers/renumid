@@ -1,0 +1,144 @@
+= renumid(1)
+Dag Wieers <dag@wieers.com>
+v1.0, November 2015
+
+
+== NAME
+renumid - renumber or remap UIDs/GIDs on file systems efficiently
+
+
+== SYNOPSIS
+renumid [subcommand] [options]
+
+
+== DESCRIPTION
+renumid was designed to efficiently renumber UIDs/GIDS on file systems. It
+achieves this by using a two-phased process which separates the scanning
+of the file system(s) ('Index' phase) with the actual processing and
+renumbering ('Renumber' phase).
+
+renumid offers the following advantages compared to a generic
+search-and-replace script that is commonly used:
+
+ - it only performs a single scan of the file system(s) to determine what
+   needs to be done for all UIDs/GIDs in a single mapping
+
+ - if interrupted, the process can efficiently restart renumbering the
+   UIDs/GIDs, or can be told to restore the original situation
+
+ - the processing time can be benchmarked/tested in advance on the real
+   system/storage without impacting/changing the running system
+
+ - benchmarking information can be useful to plan and execute complex user
+   access management implementations (and reduce downtime)
+
+ - a single mapping file can describe the necessary changes for all the
+   systems that require renumbering
+
+ - at any time you can restore, or re-renumber the file systems according
+   to the generated index file
+
+ - inconsistencies or human errors are avoided by storing all details inside
+   of the index file (this prevents using incompatible index file and mapping
+   file during renumber/restore)
+
+renumid is a simple low-level tool that helps perform a very specific task.
+It may even help in determining which renumbering is valid, but the hardest
+part by far is to create a good renumbering map that remediates any (future)
+conflicts and inconsistencies.
+
+
+[WARNING]
+--
+It is important to avoid any changes to the file system (more specifically
+the UIDs/GIDs affected) between the 'Index' phase and the 'Renumber' phase.
+
+Obviously if this is only to benchmark the duration (e.g. 'Restore' mode)
+this is not a very big problem, but to ensure a correct execution *it is
+advisable to index/renumber in single user mode*.
+--
+
+
+== SUBCOMMANDS
+index::
+    create a file system index of impacted paths using a map
+
+status::
+    show a status report of impacted paths and affected UIDs/GIDs
+
+renumber::
+    renumber the impacted paths according to the stored map
+
+restore::
+    restore the original situation using the index file
+
+
+== OPTIONS
+-v, --verbose::
+    be more and more and more verbose
+
+-f INDEX, --file=INDEX::
+    index file to create/use
+
+
+== INDEX OPTIONS
+-m MAP, --map=MAP::
+    map file to use for UID/GID renumbering
+
+-T FSTYPES, --fstypes=FSTYPES::
+    list of file system types to index
+
+
+== RENUMBER/RESTORE OPTIONS
+-t, --test::
+    test the run without actually changing anything
+
+
+== ARGUMENTS
+In 'Index' mode you can provide different paths to index as arguments.
+
+
+== EXAMPLES
+If you plan to renumber UIDs/GIDs in file systems /home and /usr, you first
+would need to create a file system index.
+----
+renumid index -f renumid-home-usr.idx -m mapping.yaml /home /usr
+----
+
+You can then query the information inside the index file.
+----
+renumid status -f renumid-home-usr.idx
+----
+
+Or if you need more details, you can do.
+----
+renumid status -vvv -f renumid-home-usr.idx
+----
+
+To actually perform the required renumbering, you do.
+----
+renumid renumber -f renumid-home-usr.idx
+----
+
+You can always restore the original state by doing.
+----
+renumid restore -f renumid-home-usr.idx
+----
+
+
+== BUGS
+If you have improvements or bugreports, please send them to:
+mailto:dag@wieers.com[]
+
+[NOTE]
+Please see the TODO file for known bugs and future plans.
+
+
+== SEE ALSO
+    find(1)
+
+
+== AUTHOR
+Written by Dag Wieers mailto:dag@wieers.com[]
+
+Homepage at http://github.com/dagwieers/renumid[]
