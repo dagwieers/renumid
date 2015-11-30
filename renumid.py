@@ -46,25 +46,20 @@ def error(rc, msg):
     syslog.syslog(syslog.LOG_ERROR, msg)
     sys.exit(rc)
 
-def lchown(path, uid=None, gid=None):
+def lchown(path, uid=-1, gid=-1):
     '''Change ownership of files, report or test.'''
     if options.verbosity > 0:
-        if uid is None and gid is not None:
+        if uid is -1 and gid is not -1:
             info(1, 'Set path %s to gid %d' % (path, gid))
-        elif uid is not None and gid is None:
+        elif uid is not -1 and gid is -1:
             info(1, 'Set path %s to uid %d' % (path, uid))
-        elif uid is not None and gid is not None:
+        elif uid is not -1 and gid is not -1:
             info(1, 'Set path %s to uid %d and gid to %d' % (path, uid, gid))
         else:
             raise 'Should not happen !'
 
     if options.test:
         return
-
-    if uid == None:
-        uid = os.lstat(path).st_uid
-    if gid == None:
-        gid = os.lstat(path).st_gid
 
     try:
         os.lchown(path, uid, gid)
