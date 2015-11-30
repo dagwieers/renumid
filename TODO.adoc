@@ -10,19 +10,22 @@
 - Warn on running processes using any of these UIDs/GIDs
 - Restore setuid ot setgid permissions after update
 - Remember which devices were already scanned so we can skip bind-mounts with certainty
+- Report which files have ACLs configured
+- Create a renumber/restore log file (based on index filename)
 
 
 == Improvements
 - Implement better subcommand support (but argparse does not ship with RHEL5)
-- Check Index format version before use
+- Check index format version before use
 - Support both 'renumid renumber' and 'renumid-renumber' calls ?
 
 
-== Store format
+== Index file format
 - Store both uid and gid per path
 - More efficiently handle paths requiring both a uid and gid change
   (requires changing the data structure)
 - Use something better than pickle ?
+- Compress index file
 
 
 == New use-cases
