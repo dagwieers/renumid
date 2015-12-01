@@ -40,6 +40,7 @@ def info(level, msg):
 
 def warn(msg):
     print >>sys.stderr, 'WARNING:', msg
+    syslog.syslog(syslog.LOG_WARNING, msg)
 
 def error(rc, msg):
     print >>sys.stderr, 'ERROR:', msg
