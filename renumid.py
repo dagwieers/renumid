@@ -144,7 +144,7 @@ parser.add_option_group(group2)
 
 parser.set_usage('Usage: %prog [subcommand] [options]')
 
-### Set the default index name
+parser.set_defaults(verbosity=0)
 parser.set_defaults(index=None)
 parser.set_defaults(map=None)
 parser.set_defaults(fstypes='ext3,ext4,xfs')
@@ -274,6 +274,7 @@ if subcommand == 'index':
     syslog.syslog(syslog.LOG_INFO, 'Index file finished and written as %s.' % options.index)
 
     if options.verbosity == 0:
+        print 'Index file written as %s' % options.index
         sys.exit(0)
 
 
