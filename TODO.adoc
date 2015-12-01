@@ -20,18 +20,9 @@
 - Make it Unix-agnostic (renumid currently relies on /proc/mounts and /proc/stat)
 
 
-== Documentation
-- Explain how NFS file systems should be renumbered (or not...)
-- Explain the impact on setuid/setgid during renumber/restore
-- Explain how renumid influences ctime, mtime and atime (hint: it does not)
-- Explain how renumid behaves with bind mounts
-
-
 == Index file format v2
-- Store both uid and gid per path
-- Store setuid and setgid bits in format (v2 ?)
-- More efficiently handle paths requiring both a uid and gid change
-  (requires changing the data structure)
+- Store setuid and setgid bits
+- Store both uid and gid per path (more efficiently handle paths requiring both changes)
 - Use something better than pickle ?
 - Compress index file
 
