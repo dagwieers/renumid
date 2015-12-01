@@ -7,7 +7,6 @@
 
 
 == Features
-- Warn on running processes using any of these UIDs/GIDs
 - Create a renumber/restore log file (based on index filename)
 - Add options to select specific restore uids/gids (-U 12,23 or -G 32,21)
 - Add option to not cross file system boundaries (-x / --one-file-system)

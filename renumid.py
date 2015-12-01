@@ -40,11 +40,11 @@ def info(level, msg):
 
 def warn(msg):
     print >>sys.stderr, 'WARNING:', msg
-    syslog.syslog(syslog.LOG_WARNING, msg)
+    syslog.syslog(syslog.LOG_WARNING, 'WARNING: %s' % msg)
 
 def error(rc, msg):
     print >>sys.stderr, 'ERROR:', msg
-    syslog.syslog(syslog.LOG_ERR, msg)
+    syslog.syslog(syslog.LOG_ERR, 'ERROR: %s' % msg)
     sys.exit(rc)
 
 def boottime():
@@ -111,6 +111,24 @@ def process_idmap(idmap):
                 gidmap.update(idmap[key]['gidmap'])
 
     return uidmap, gidmap
+
+def report_running():
+    for entry in os.listdir('/proc'):
+        if not entry.isdigit: continue
+        try:
+            s = os.lstat('/proc/%s' % entry)
+        except OSError, e:
+            pass
+
+        if s.st_uid in uidmap.keys() and s.st_gid in gidmap.keys():
+            name = os.path.basename(open('/proc/%s/cmdline' % entry).read().split('\0')[0])
+            warn('Process %s [%s] is running as impacted uid %d and gid %d' % (name, entry, s.st_uid, s.st_gid))
+        elif s.st_uid in uidmap.keys():
+            name = os.path.basename(open('/proc/%s/cmdline' % entry).read().split('\0')[0])
+            warn('Process %s [%s] is running as impacted uid %d' % (name, entry, s.st_uid))
+        elif s.st_gid in gidmap.keys():
+            name = os.path.basename(open('/proc/%s/cmdline' % entry).read().split('\0')[0])
+            warn('Process %s [%s] is running as impacted gid %d' % (name, entry, s.st_gid))
 
 
 parser = optparse.OptionParser(
@@ -188,6 +206,8 @@ if subcommand == 'index':
         error(17, e)
 
     uidmap, gidmap = process_idmap(idmap)
+
+    report_running()
 
     store = {
       'parents': parents,
@@ -297,6 +317,9 @@ if subcommand in ('status', 'renumber', 'restore'):
     if store['version'] != FORMAT_VERSION:
         error (16, 'The index file  has format version %d, while this tool expects version %d.' % (store['version'], FORMAT_VERSION))
 
+    uidmap = store['uidmap']
+    gidmap = store['gidmap']
+
 
 ### STATUS mode
 if subcommand in ('index', 'status'):
@@ -328,6 +351,8 @@ if subcommand in ('index', 'status'):
 
 ### RENUMBER mode - renumber ownership based on stored uidmap/gidmap
 if subcommand == 'renumber':
+
+    report_running()
 
     syslog.syslog(syslog.LOG_INFO, 'Renumbering files started.')
 
