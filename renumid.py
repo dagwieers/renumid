@@ -46,6 +46,18 @@ def error(rc, msg):
     syslog.syslog(syslog.LOG_ERROR, msg)
     sys.exit(rc)
 
+def boottime():
+    with open('/proc/stat') as f:
+        for line in f:
+            if line.startswith(b'btime'):
+                return float(line.strip().split()[1])
+        raise 'Boottime not found in /proc/stat'
+
+def starttime():
+    clock_ticks = os.sysconf('SC_CLK_TCK')
+    values = open('/proc/%d/stat' % os.getpid()).read().split(b' ')
+    return (float(values[21]) / clock_ticks) + boottime()
+
 def lchown(path, uid=-1, gid=-1):
     '''Change ownership of files, report or test.'''
     if options.verbosity > 0:
@@ -236,9 +248,11 @@ if subcommand == 'index':
                         store['gid'][s.st_gid].append(path)
                     gid_paths_retained += 1
 
+    times = os.times()
+    store['realtime'] = time.time() - starttime()
+    store['usrtime'] = times[0]
+    store['systime'] = times[1]
     store['stop'] = datetime.now()
-    store['runtime'] = store['stop'] - store['start']
-    store['cputime'] = time.clock()
     store['uidmap'] = uidmap
     store['gidmap'] = gidmap
     store['uid_paths_retained'] = uid_paths_retained
@@ -295,8 +309,9 @@ if subcommand in ('index', 'status'):
     print '  Number of UID paths retained:', store['uid_paths_retained']
     print '  Number of GID paths retained:', store['gid_paths_retained']
     print '  Total number of paths processed:', store['paths_scanned']
-    print '  Total cputime: %.2f secs' % store['cputime']
-    print '  Total runtime: %.2f secs' % (store['runtime'].seconds + store['runtime'].microseconds * 1.0 / 1000000)
+    print '  Real time: %.2f secs' % store['realtime']
+    print '  User time: %.2f secs' % store['usrtime']
+    print '  System time: %.2f secs' % store['systime']
     print
 
     if options.verbosity > 3:
