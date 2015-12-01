@@ -43,7 +43,7 @@ def warn(msg):
 
 def error(rc, msg):
     print >>sys.stderr, 'ERROR:', msg
-    syslog.syslog(syslog.LOG_ERROR, msg)
+    syslog.syslog(syslog.LOG_ERR, msg)
     sys.exit(rc)
 
 def boottime():
