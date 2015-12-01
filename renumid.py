@@ -49,7 +49,7 @@ def error(rc, msg):
 def boottime():
     with open('/proc/stat') as f:
         for line in f:
-            if line.startswith(b'btime'):
+            if line.startswith(b'btime '):
                 return float(line.strip().split()[1])
         raise 'Boottime not found in /proc/stat'
 
@@ -271,13 +271,14 @@ if subcommand == 'index':
     except Exception, e:
         error(13, 'Unable to dump Index file %s !\n%s' % (options.index, e))
 
-    syslog.syslog(syslog.LOG_INFO, 'Index file finished and written as %s.' % options.index)
+    syslog.syslog(syslog.LOG_INFO, 'Index file finished and written as: %s' % options.index)
 
     if options.verbosity == 0:
-        print 'Index file written as %s' % options.index
+        print 'Index file written as: %s' % options.index
         sys.exit(0)
 
 
+### Load the index file
 if subcommand in ('status', 'renumber', 'restore'):
 
     if options.index is None:
