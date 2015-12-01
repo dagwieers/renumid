@@ -294,6 +294,9 @@ if subcommand in ('status', 'renumber', 'restore'):
     else:
         error(15, 'Index file %s could not be found.' % options.index)
 
+    if store['version'] != FORMAT_VERSION:
+        error (16, 'The index file  has format version %d, while this tool expects version %d.' % (store['version'], FORMAT_VERSION))
+
 
 ### STATUS mode
 if subcommand in ('index', 'status'):

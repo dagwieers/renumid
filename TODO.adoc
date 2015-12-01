@@ -15,9 +15,8 @@
 
 == Improvements
 - Implement better subcommand support (but argparse does not ship with RHEL5)
-- Check index format version before use
 - Support both 'renumid renumber' and 'renumid-renumber' calls maybe ?
-- Make it Unix-agnostic (renumid currently relies on /proc/mounts and /proc/stat)
+- Make renumid Unix-agnostic (renumid currently relies on /proc/mounts and /proc/stat)
 
 
 == Index file format v2
