@@ -1,27 +1,35 @@
 = TODO items
 
 == Bugs
-- Handle case where Index file already exists (during start or during dump)
+- Handle case where index file already exists (during index start or during index dump)
+- Permissions setuid and setgid may get lost when ownership changes (on Linux only setuid)
+- Bind mounts are processed multiple times (could be avoided ?)
 
 
 == Features
+- Warn on running processes using any of these UIDs/GIDs
+- Create a renumber/restore log file (based on index filename)
 - Add options to select specific restore uids/gids (-U 12,23 or -G 32,21)
 - Add option to not cross file system boundaries (-x / --one-file-system)
-- Warn on running processes using any of these UIDs/GIDs
-- Restore setuid ot setgid permissions after update
-- Remember which devices were already scanned so we can skip bind-mounts with certainty
-- Report which files have ACLs configured
-- Create a renumber/restore log file (based on index filename)
 
 
 == Improvements
 - Implement better subcommand support (but argparse does not ship with RHEL5)
 - Check index format version before use
-- Support both 'renumid renumber' and 'renumid-renumber' calls ?
+- Support both 'renumid renumber' and 'renumid-renumber' calls maybe ?
+- Make it Unix-agnostic (renumid currently relies on /proc/mounts and /proc/stat)
 
 
-== Index file format
+== Documentation
+- Explain how NFS file systems should be renumbered (or not...)
+- Explain the impact on setuid/setgid during renumber/restore
+- Explain how renumid influences ctime, mtime and atime (hint: it does not)
+- Explain how renumid behaves with bind mounts
+
+
+== Index file format v2
 - Store both uid and gid per path
+- Store setuid and setgid bits in format (v2 ?)
 - More efficiently handle paths requiring both a uid and gid change
   (requires changing the data structure)
 - Use something better than pickle ?
@@ -29,6 +37,7 @@
 
 
 == New use-cases
-- Option to create a full index (discard the mapping)
+- Option to create a full file system index (discard the mapping)
 - Option to switch renumber/restore based on uidmap/gidmap or complete store
 - Apply operations in 'chrooted' mode (in case filesystems are mounted elsewhere)
+- Report which files have ACLs configured (optional based on pylibacl support ?)
