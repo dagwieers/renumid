@@ -2,12 +2,12 @@
 
 == Bugs
 - Handle case where index file already exists (during index start or during index dump)
-- Permissions setuid and setgid may get lost when ownership changes (on Linux only setuid)
-- Bind mounts are processed multiple times (could be avoided ?)
+- Setuid and setgid bits may get lost when ownership changes, only setuid on Linux (see v2 format)
+- Bind mounts are processed multiple times (how to avoid this ?)
 
 
 == Features
-- Create a renumber/restore log file (based on index filename)
+- Create a renumber/restore log file, based on index filename (performance impact)
 - Add options to select specific restore uids/gids (-U 12,23 or -G 32,21)
 - Add option to not cross file system boundaries (-x / --one-file-system)
 
@@ -21,6 +21,7 @@
 == Index file format v2
 - Store setuid and setgid bits
 - Store both uid and gid per path (more efficiently handle paths requiring both changes)
+- Create tree for more dense index files
 - Use something better than pickle ?
 - Compress index file
 
@@ -28,5 +29,5 @@
 == New use-cases
 - Option to create a full file system index (discard the mapping)
 - Option to switch renumber/restore based on uidmap/gidmap or complete store
-- Apply operations in 'chrooted' mode (in case filesystems are mounted elsewhere)
+- Apply operations in (-C/--chroot) 'chrooted' mode (in case filesystems are mounted elsewhere)
 - Report which files have ACLs configured (optional based on pylibacl support ?)
