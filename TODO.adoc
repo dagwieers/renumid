@@ -23,7 +23,6 @@
 - Store both uid and gid per path (more efficiently handle paths requiring both changes)
 - Create tree for more dense index files
 - Use something better than pickle ?
-- Compress index file
 
 
 == New use-cases

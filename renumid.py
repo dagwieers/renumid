@@ -26,6 +26,7 @@ import yaml
 import fnmatch
 import socket
 import syslog
+import gzip
 
 VERSION = '0.1'
 FORMAT_VERSION = 1
@@ -193,7 +194,7 @@ if subcommand == 'index':
 
     # Set default Index file name (if missing)
     if options.index is None:
-        options.index = 'renumid-%s.idx' % time.strftime('%Y%m%d-%H%M', time.localtime())
+        options.index = 'renumid-%s.idx.gz' % time.strftime('%Y%m%d-%H%M', time.localtime())
 
     if len(args) < 2:
         parents = [ os.getcwd(), ]
@@ -288,7 +289,7 @@ if subcommand == 'index':
     ### FIXME: Handle the case where the file already exists using tempfile
     ### Dump store
     try:
-        pickle.dump(store, open(options.index, 'wb'))
+        pickle.dump(store, gzip.open(options.index, 'wb'))
     except Exception, e:
         error(13, 'Unable to dump Index file %s !\n%s' % (options.index, e))
 
@@ -308,9 +309,13 @@ if subcommand in ('status', 'renumber', 'restore'):
     ### Open index file (if exists and consistent)
     if os.path.lexists(options.index):
         try:
-            store = pickle.load(open(options.index, 'rb'))
+            store = pickle.load(gzip.open(options.index, 'rb'))
         except Exception, e:
-            error(14, 'Problem reading from Index file %s.\n%s' % (options.index, e))
+            ### Still support uncompressed pickle files
+            try:
+                store = pickle.load(open(options.index, 'rb'))
+            except Exception, e:
+                error(14, 'Problem reading from Index file %s.\n%s' % (options.index, e))
     else:
         error(15, 'Index file %s could not be found.' % options.index)
 
