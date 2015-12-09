@@ -126,19 +126,7 @@ renumid restore -f renumid-home-usr.idx
 ----
 
 
-== KNOWN ISSUES
-
-=== SETUID AND SETGID
-setuid and setgid permission bits are updated when ownership changes by
-non-root users. The behavior however for the root-user is undefined and
-depends on the platform. On Linux, we see the setuid bit cleared on uid
-changes, but don't see the setgid bit cleared on gid changes.
-
-=== BIND MOUNTS
-Currently renumid will not treat bind mounts differently from normal
-mounts. There is a known bug entry related to this.
-
-=== CTIME, MTIME AND ATIME
+== CTIME, MTIME AND ATIME
 ctime, mtime and atime information are updated when performing specific
 file system actions on files.
 
@@ -153,21 +141,41 @@ modified while renumbering file ownership.
 Reader beware that if this is important in your environment you should test
 this on your environment beforehand.
 
-=== FILE SYSTEM TYPES
+
+== FILE SYSTEM TYPES
 By default, renumid only considers ext3, ext4 and xfs file system types.
 You can provide a different list of file system types using the '-T' or
 '--fstypes' option.
 
 It is not advisable to perform renumid on network file systems (e.g. NFS)
-or clustered file systems without careful consideration what the impact is.
+or clustered file systems without careful consideration what the impact is
+(both to the performance as well as the outcome of the changes).
 
-=== RUNNING SYSTEMS
+
+== RUNNING PROCESSES
 Beware that renumbering UIDs/GIDs on a running system may have unexpected
 results and may lead to inconsistencies, application failures and/or data
 corruption.
 
+renumid will report any running processes using one of the UIDs or GIDs
+that is being remapped/renumbered as a warning.
+
+[TIP]
 You may want to either stop all the affected running applications, or
 preferably go into single user mode first.
+
+
+== KNOWN ISSUES
+
+=== SETUID AND SETGID
+setuid and setgid permission bits are updated when ownership changes by
+non-root users. The behavior however for the root-user is undefined and
+depends on the platform. On Linux, we see the setuid bit cleared on uid
+changes, but don't see the setgid bit cleared on gid changes.
+
+=== BIND MOUNTS
+Currently renumid will not treat bind mounts differently from normal
+mounts. There is a known bug entry related to this.
 
 
 == BUGS
