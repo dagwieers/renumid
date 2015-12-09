@@ -176,6 +176,6 @@ https://github.com/dagwieers/renumid/issues[]
 
 
 == SEE ALSO
-chown(1), find(1)
+chgrp(1), chown(1), find(1), libuser.conf(5), groupmod(8), usermod(8)
 
 Homepage at http://github.com/dagwieers/renumid[]
